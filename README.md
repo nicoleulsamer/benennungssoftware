@@ -24,6 +24,14 @@ Ohne `--dry-run` werden Dateien tatsächlich verschoben:
 python -m benennungssoftware.cli process --config examples/config.json
 ```
 
+Ein CSV-Protokoll kann zusätzlich geschrieben werden:
+
+```powershell
+python -m benennungssoftware.cli process --config examples/config.json --dry-run --log examples/demo/process-log.csv
+```
+
+Das Protokoll enthält Zeitstempel, Dry-Run-Status, Quellpfad, Zielpfad, Projektcode und den Grund bei nicht zuordenbaren Dokumenten.
+
 ## Konfiguration
 
 Siehe [examples/config.json](examples/config.json). Wichtige Felder:

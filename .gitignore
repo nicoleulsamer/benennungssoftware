@@ -11,6 +11,7 @@ env/
 # Demo output folders are recreated by the application.
 examples/demo/projects/
 examples/demo/unassigned/
+examples/demo/*.csv
 
 # Local editor and OS files.
 .vscode/
