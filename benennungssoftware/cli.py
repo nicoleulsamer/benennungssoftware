@@ -7,6 +7,7 @@ from .config import add_keyword_to_config, add_project_to_config, load_config, v
 from .diagnostics import check_ocr_environment
 from .processor import assign_unassigned_document, list_unassigned_documents, process_scan_folder
 from .reporting import write_process_report
+from .text_extraction import extract_document_text, preview_text
 
 
 def main() -> int:
@@ -45,6 +46,11 @@ def main() -> int:
 
     unassigned_parser = subparsers.add_parser("unassigned", help="Dateien im Klaerungsordner anzeigen")
     unassigned_parser.add_argument("--config", required=True, type=Path, help="Pfad zur JSON-Konfiguration")
+
+    inspect_parser = subparsers.add_parser("inspect", help="Extrahierten Text einer Datei anzeigen")
+    inspect_parser.add_argument("--config", required=True, type=Path, help="Pfad zur JSON-Konfiguration")
+    inspect_parser.add_argument("--source", required=True, type=Path, help="Zu pruefende Datei")
+    inspect_parser.add_argument("--chars", type=int, default=2000, help="Maximale Zeichen im Textausschnitt")
 
     check_ocr_parser = subparsers.add_parser("check-ocr", help="OCR-Voraussetzungen pruefen")
     check_ocr_parser.add_argument("--language", default="deu", help="Tesseract-Sprachcode, z. B. deu oder eng")
@@ -111,6 +117,17 @@ def main() -> int:
         for index, document in enumerate(documents, start=1):
             print(f"{index}: {document}")
         print(f"{len(documents)} Datei(en) im Klärungsordner")
+        return 0
+
+    if args.command == "inspect":
+        config = load_config(args.config)
+        text = extract_document_text(args.source, config.text_extraction)
+        print(f"Datei: {args.source}")
+        print(f"Extrahierte Zeichen: {len(text)}")
+        if not text.strip():
+            print("Kein Text erkannt")
+            return 1
+        print(preview_text(text, max(1, args.chars)))
         return 0
 
     if args.command == "check-ocr":

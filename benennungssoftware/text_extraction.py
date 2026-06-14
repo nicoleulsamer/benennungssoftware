@@ -23,6 +23,13 @@ def extract_document_text(source: Path, config: TextExtractionConfig) -> str:
     return ""
 
 
+def preview_text(text: str, max_chars: int) -> str:
+    compact = " ".join(text.split())
+    if len(compact) <= max_chars:
+        return compact
+    return compact[:max_chars].rstrip() + "..."
+
+
 def extract_pdf_text(source: Path, config: TextExtractionConfig) -> str:
     embedded_text = extract_embedded_pdf_text(source)
     if len(embedded_text.strip()) >= config.min_embedded_text_length:

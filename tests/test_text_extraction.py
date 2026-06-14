@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
-from benennungssoftware.text_extraction import TextExtractionConfig, extract_document_text, extract_ocr_pdf_text, extract_pdf_text
+from benennungssoftware.text_extraction import TextExtractionConfig, extract_document_text, extract_ocr_pdf_text, extract_pdf_text, preview_text
 
 
 class TextExtractionTests(unittest.TestCase):
@@ -17,6 +17,11 @@ class TextExtractionTests(unittest.TestCase):
             text = extract_document_text(source, TextExtractionConfig())
 
             self.assertIn("Sanierung Nord", text)
+
+    def test_preview_text_compacts_and_truncates_text(self) -> None:
+        text = " Erste\n\nZeile   zweite Zeile mit mehr Text "
+
+        self.assertEqual(preview_text(text, 18), "Erste Zeile zweite...")
 
     def test_pdf_uses_embedded_text_when_it_is_long_enough(self) -> None:
         config = TextExtractionConfig(min_embedded_text_length=10)

@@ -62,6 +62,12 @@ Dateien im Klärungsordner anzeigen:
 python -m benennungssoftware.cli unassigned --config examples/config.json
 ```
 
+Extrahierten Text einer Datei prüfen:
+
+```powershell
+python -m benennungssoftware.cli inspect --config examples/config.json --source examples/demo/scans/beispiel.pdf --chars 2000
+```
+
 Ein Dokument aus dem Klärungsordner kann manuell einem Projekt zugewiesen werden:
 
 ```powershell
