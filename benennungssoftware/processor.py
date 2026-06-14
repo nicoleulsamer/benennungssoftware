@@ -67,6 +67,16 @@ def assign_unassigned_document(
     return _move(source, target, dry_run=dry_run, status="manually_assigned", project_code=project.code)
 
 
+def list_unassigned_documents(config: AppConfig) -> list[Path]:
+    if not config.unassigned_folder.exists():
+        return []
+    return [
+        source
+        for source in sorted(config.unassigned_folder.iterdir())
+        if source.is_file() and source.suffix.lower() in config.allowed_extensions
+    ]
+
+
 def find_project_by_code(config: AppConfig, project_code: str) -> Project | None:
     normalized = project_code.casefold()
     for project in config.projects:

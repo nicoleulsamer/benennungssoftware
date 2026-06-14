@@ -38,6 +38,12 @@ Konfigurierte Projekte anzeigen:
 python -m benennungssoftware.cli projects --config examples/config.json --keywords
 ```
 
+Dateien im Klärungsordner anzeigen:
+
+```powershell
+python -m benennungssoftware.cli unassigned --config examples/config.json
+```
+
 Ein Dokument aus dem Klärungsordner kann manuell einem Projekt zugewiesen werden:
 
 ```powershell

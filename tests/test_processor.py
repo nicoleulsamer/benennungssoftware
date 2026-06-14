@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 
 from benennungssoftware.config import AppConfig, Project
-from benennungssoftware.processor import assign_unassigned_document, process_scan_folder, sanitize
+from benennungssoftware.processor import assign_unassigned_document, list_unassigned_documents, process_scan_folder, sanitize
 
 
 class ProcessorTests(unittest.TestCase):
@@ -154,6 +154,45 @@ class ProcessorTests(unittest.TestCase):
 
             with self.assertRaises(ValueError):
                 assign_unassigned_document(config, source, "PRJ999")
+
+    def test_lists_unassigned_documents_with_allowed_extensions(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            unassigned_folder = root / "unassigned"
+            unassigned_folder.mkdir()
+            first = unassigned_folder / "a.txt"
+            second = unassigned_folder / "b.pdf"
+            ignored = unassigned_folder / "ignore.tmp"
+            first.write_text("A", encoding="utf-8")
+            second.write_bytes(b"pdf")
+            ignored.write_text("tmp", encoding="utf-8")
+
+            config = AppConfig(
+                scan_folder=root / "scans",
+                projects_root=root / "projects",
+                unassigned_folder=unassigned_folder,
+                name_schema="{date}_{project_code}_{document_type}_{original_stem}{extension}",
+                default_document_type="Dokument",
+                allowed_extensions=(".pdf", ".txt"),
+                projects=(),
+            )
+
+            self.assertEqual(list_unassigned_documents(config), [first, second])
+
+    def test_lists_no_unassigned_documents_when_folder_is_missing(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = AppConfig(
+                scan_folder=root / "scans",
+                projects_root=root / "projects",
+                unassigned_folder=root / "unassigned",
+                name_schema="{date}_{project_code}_{document_type}_{original_stem}{extension}",
+                default_document_type="Dokument",
+                allowed_extensions=(".pdf", ".txt"),
+                projects=(),
+            )
+
+            self.assertEqual(list_unassigned_documents(config), [])
 
     def test_sanitize_removes_unsafe_filename_characters(self) -> None:
         self.assertEqual(sanitize(" Rechnung: Kunde A / 2026 "), "Rechnung-Kunde-A-2026")

@@ -5,7 +5,7 @@ from pathlib import Path
 
 from .config import load_config
 from .diagnostics import check_ocr_environment
-from .processor import assign_unassigned_document, process_scan_folder
+from .processor import assign_unassigned_document, list_unassigned_documents, process_scan_folder
 from .reporting import write_process_report
 
 
@@ -28,6 +28,9 @@ def main() -> int:
     projects_parser = subparsers.add_parser("projects", help="Konfigurierte Projekte anzeigen")
     projects_parser.add_argument("--config", required=True, type=Path, help="Pfad zur JSON-Konfiguration")
     projects_parser.add_argument("--keywords", action="store_true", help="Keywords je Projekt anzeigen")
+
+    unassigned_parser = subparsers.add_parser("unassigned", help="Dateien im Klaerungsordner anzeigen")
+    unassigned_parser.add_argument("--config", required=True, type=Path, help="Pfad zur JSON-Konfiguration")
 
     check_ocr_parser = subparsers.add_parser("check-ocr", help="OCR-Voraussetzungen pruefen")
     check_ocr_parser.add_argument("--language", default="deu", help="Tesseract-Sprachcode, z. B. deu oder eng")
@@ -67,6 +70,14 @@ def main() -> int:
             if args.keywords:
                 print(f"  keywords: {', '.join(project.keywords) or '-'}")
         print(f"{len(config.projects)} Projekt(e) konfiguriert")
+        return 0
+
+    if args.command == "unassigned":
+        config = load_config(args.config)
+        documents = list_unassigned_documents(config)
+        for index, document in enumerate(documents, start=1):
+            print(f"{index}: {document}")
+        print(f"{len(documents)} Datei(en) im Klärungsordner")
         return 0
 
     if args.command == "check-ocr":
