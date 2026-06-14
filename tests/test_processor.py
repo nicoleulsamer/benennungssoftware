@@ -197,6 +197,13 @@ class ProcessorTests(unittest.TestCase):
     def test_sanitize_removes_unsafe_filename_characters(self) -> None:
         self.assertEqual(sanitize(" Rechnung: Kunde A / 2026 "), "Rechnung-Kunde-A-2026")
 
+    def test_sanitize_transliterates_german_characters(self) -> None:
+        self.assertEqual(
+            sanitize("Präsentation zur Studie Sexuelle Belästigung"),
+            "Praesentation-zur-Studie-Sexuelle-Belaestigung",
+        )
+        self.assertEqual(sanitize("Grüße aus Österreich"), "Gruesse-aus-Oesterreich")
+
 
 if __name__ == "__main__":
     unittest.main()

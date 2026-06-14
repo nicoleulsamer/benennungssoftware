@@ -118,7 +118,17 @@ def build_filename(config: AppConfig, project: Project, source: Path, current_da
 
 
 def sanitize(value: str) -> str:
-    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", value.strip())
+    transliterated = (
+        value.strip()
+        .replace("ä", "ae")
+        .replace("ö", "oe")
+        .replace("ü", "ue")
+        .replace("Ä", "Ae")
+        .replace("Ö", "Oe")
+        .replace("Ü", "Ue")
+        .replace("ß", "ss")
+    )
+    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", transliterated)
     cleaned = re.sub(r"-{2,}", "-", cleaned).strip("-._")
     return cleaned or "unbenannt"
 
