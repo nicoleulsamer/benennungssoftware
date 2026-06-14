@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from .config import load_config
+from .config import add_keyword_to_config, add_project_to_config, load_config
 from .diagnostics import check_ocr_environment
 from .processor import assign_unassigned_document, list_unassigned_documents, process_scan_folder
 from .reporting import write_process_report
@@ -28,6 +28,17 @@ def main() -> int:
     projects_parser = subparsers.add_parser("projects", help="Konfigurierte Projekte anzeigen")
     projects_parser.add_argument("--config", required=True, type=Path, help="Pfad zur JSON-Konfiguration")
     projects_parser.add_argument("--keywords", action="store_true", help="Keywords je Projekt anzeigen")
+
+    add_project_parser = subparsers.add_parser("add-project", help="Projekt zur Konfiguration hinzufuegen")
+    add_project_parser.add_argument("--config", required=True, type=Path, help="Pfad zur JSON-Konfiguration")
+    add_project_parser.add_argument("--code", required=True, help="Projektcode, z. B. PRJ003")
+    add_project_parser.add_argument("--folder", required=True, help="Zielordner fuer das Projekt")
+    add_project_parser.add_argument("--keyword", required=True, action="append", help="Keyword; mehrfach verwendbar")
+
+    add_keyword_parser = subparsers.add_parser("add-keyword", help="Keyword zu einem Projekt hinzufuegen")
+    add_keyword_parser.add_argument("--config", required=True, type=Path, help="Pfad zur JSON-Konfiguration")
+    add_keyword_parser.add_argument("--project", required=True, help="Projektcode, z. B. PRJ001")
+    add_keyword_parser.add_argument("--keyword", required=True, help="Neues Keyword")
 
     unassigned_parser = subparsers.add_parser("unassigned", help="Dateien im Klaerungsordner anzeigen")
     unassigned_parser.add_argument("--config", required=True, type=Path, help="Pfad zur JSON-Konfiguration")
@@ -70,6 +81,16 @@ def main() -> int:
             if args.keywords:
                 print(f"  keywords: {', '.join(project.keywords) or '-'}")
         print(f"{len(config.projects)} Projekt(e) konfiguriert")
+        return 0
+
+    if args.command == "add-project":
+        add_project_to_config(args.config, args.code, args.folder, args.keyword)
+        print(f"Projekt hinzugefügt: {args.code} -> {args.folder}")
+        return 0
+
+    if args.command == "add-keyword":
+        add_keyword_to_config(args.config, args.project, args.keyword)
+        print(f"Keyword hinzugefügt: {args.project} -> {args.keyword.strip().casefold()}")
         return 0
 
     if args.command == "unassigned":

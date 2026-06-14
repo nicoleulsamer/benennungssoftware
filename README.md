@@ -38,6 +38,18 @@ Konfigurierte Projekte anzeigen:
 python -m benennungssoftware.cli projects --config examples/config.json --keywords
 ```
 
+Projekt hinzufügen:
+
+```powershell
+python -m benennungssoftware.cli add-project --config examples/config.json --code PRJ003 --folder PRJ003_Neues-Projekt --keyword "kunde c" --keyword "aktenzeichen 42"
+```
+
+Keyword ergänzen:
+
+```powershell
+python -m benennungssoftware.cli add-keyword --config examples/config.json --project PRJ003 --keyword "rechnung c"
+```
+
 Dateien im Klärungsordner anzeigen:
 
 ```powershell

@@ -12,6 +12,7 @@ env/
 examples/demo/projects/
 examples/demo/unassigned/
 examples/demo/*.csv
+examples/demo/*-test.json
 
 # Local editor and OS files.
 .vscode/
