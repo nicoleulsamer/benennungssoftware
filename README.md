@@ -50,6 +50,12 @@ Keyword ergänzen:
 python -m benennungssoftware.cli add-keyword --config examples/config.json --project PRJ003 --keyword "rechnung c"
 ```
 
+Konfiguration prüfen:
+
+```powershell
+python -m benennungssoftware.cli validate-config --config examples/config.json
+```
+
 Dateien im Klärungsordner anzeigen:
 
 ```powershell

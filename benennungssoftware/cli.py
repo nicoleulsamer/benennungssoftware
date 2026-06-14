@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from .config import add_keyword_to_config, add_project_to_config, load_config
+from .config import add_keyword_to_config, add_project_to_config, load_config, validate_config_file
 from .diagnostics import check_ocr_environment
 from .processor import assign_unassigned_document, list_unassigned_documents, process_scan_folder
 from .reporting import write_process_report
@@ -39,6 +39,9 @@ def main() -> int:
     add_keyword_parser.add_argument("--config", required=True, type=Path, help="Pfad zur JSON-Konfiguration")
     add_keyword_parser.add_argument("--project", required=True, help="Projektcode, z. B. PRJ001")
     add_keyword_parser.add_argument("--keyword", required=True, help="Neues Keyword")
+
+    validate_parser = subparsers.add_parser("validate-config", help="Konfiguration pruefen")
+    validate_parser.add_argument("--config", required=True, type=Path, help="Pfad zur JSON-Konfiguration")
 
     unassigned_parser = subparsers.add_parser("unassigned", help="Dateien im Klaerungsordner anzeigen")
     unassigned_parser.add_argument("--config", required=True, type=Path, help="Pfad zur JSON-Konfiguration")
@@ -92,6 +95,15 @@ def main() -> int:
         add_keyword_to_config(args.config, args.project, args.keyword)
         print(f"Keyword hinzugefügt: {args.project} -> {args.keyword.strip().casefold()}")
         return 0
+
+    if args.command == "validate-config":
+        issues = validate_config_file(args.config)
+        if not issues:
+            print("OK: Konfiguration ist plausibel")
+            return 0
+        for issue in issues:
+            print(f"{issue.severity.upper()}: {issue.message}")
+        return 1 if any(issue.severity == "error" for issue in issues) else 0
 
     if args.command == "unassigned":
         config = load_config(args.config)

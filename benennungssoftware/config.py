@@ -26,6 +26,12 @@ class AppConfig:
     text_extraction: TextExtractionConfig = field(default_factory=TextExtractionConfig)
 
 
+@dataclass(frozen=True)
+class ConfigIssue:
+    severity: str
+    message: str
+
+
 def load_config(path: str | Path) -> AppConfig:
     config_path = Path(path)
     raw = load_raw_config(config_path)
@@ -48,6 +54,46 @@ def load_config(path: str | Path) -> AppConfig:
             for item in raw.get("projects", [])
         ),
     )
+
+
+def validate_config_file(path: str | Path) -> list[ConfigIssue]:
+    config_path = Path(path)
+    issues: list[ConfigIssue] = []
+    try:
+        raw = load_raw_config(config_path)
+    except Exception as exc:
+        return [ConfigIssue("error", f"Konfiguration konnte nicht gelesen werden: {exc}")]
+
+    for key in ("scan_folder", "projects_root", "unassigned_folder"):
+        if not str(raw.get(key, "")).strip():
+            issues.append(ConfigIssue("error", f"Pflichtfeld fehlt oder ist leer: {key}"))
+
+    schema = raw.get("name_schema", "{date}_{project_code}_{document_type}_{original_stem}{extension}")
+    try:
+        schema.format(
+            date="2026-06-14",
+            project_code="PRJ001",
+            document_type="Dokument",
+            original_stem="scan001",
+            extension=".pdf",
+        )
+    except Exception as exc:
+        issues.append(ConfigIssue("error", f"name_schema ist ungültig: {exc}"))
+    if "{extension}" not in schema:
+        issues.append(ConfigIssue("warning", "name_schema enthält kein {extension}; Dateiendungen könnten verloren gehen"))
+
+    allowed_extensions = raw.get("allowed_extensions", [])
+    if not allowed_extensions:
+        issues.append(ConfigIssue("error", "allowed_extensions darf nicht leer sein"))
+    for extension in allowed_extensions:
+        if not isinstance(extension, str) or not extension.startswith("."):
+            issues.append(ConfigIssue("error", f"Dateiendung muss mit Punkt beginnen: {extension}"))
+
+    projects = raw.get("projects", [])
+    if not projects:
+        issues.append(ConfigIssue("warning", "Keine Projekte konfiguriert"))
+    _validate_projects(projects, issues)
+    return issues
 
 
 def load_raw_config(path: str | Path) -> dict:
@@ -121,6 +167,48 @@ def _normalize_keywords(keywords: list[str]) -> list[str]:
             normalized.append(value)
             seen.add(value)
     return normalized
+
+
+def _validate_projects(projects: list[dict], issues: list[ConfigIssue]) -> None:
+    seen_codes: set[str] = set()
+    seen_folders: set[str] = set()
+    seen_keywords: dict[str, str] = {}
+    for index, project in enumerate(projects, start=1):
+        code = str(project.get("code", "")).strip()
+        folder = str(project.get("folder", "")).strip()
+        keywords = project.get("keywords", [])
+        label = code or f"Projekt #{index}"
+
+        if not code:
+            issues.append(ConfigIssue("error", f"{label}: Projektcode fehlt"))
+        elif code.casefold() in seen_codes:
+            issues.append(ConfigIssue("error", f"Projektcode doppelt: {code}"))
+        else:
+            seen_codes.add(code.casefold())
+
+        if not folder:
+            issues.append(ConfigIssue("error", f"{label}: Zielordner fehlt"))
+        elif folder.casefold() in seen_folders:
+            issues.append(ConfigIssue("error", f"Zielordner doppelt: {folder}"))
+        else:
+            seen_folders.add(folder.casefold())
+
+        if not isinstance(keywords, list) or not keywords:
+            issues.append(ConfigIssue("warning", f"{label}: keine Keywords konfiguriert"))
+            continue
+
+        local_keywords: set[str] = set()
+        for keyword in keywords:
+            normalized = str(keyword).strip().casefold()
+            if not normalized:
+                issues.append(ConfigIssue("warning", f"{label}: leeres Keyword"))
+                continue
+            if normalized in local_keywords:
+                issues.append(ConfigIssue("warning", f"{label}: Keyword doppelt: {normalized}"))
+            local_keywords.add(normalized)
+            if normalized in seen_keywords and seen_keywords[normalized] != label:
+                issues.append(ConfigIssue("warning", f"Keyword kommt in mehreren Projekten vor: {normalized}"))
+            seen_keywords.setdefault(normalized, label)
 
 
 def _resolve(base_dir: Path, value: str) -> Path:
