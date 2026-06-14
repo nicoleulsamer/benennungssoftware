@@ -5,7 +5,7 @@ from pathlib import Path
 
 from .config import load_config
 from .diagnostics import check_ocr_environment
-from .processor import process_scan_folder
+from .processor import assign_unassigned_document, process_scan_folder
 from .reporting import write_process_report
 
 
@@ -17,6 +17,13 @@ def main() -> int:
     process_parser.add_argument("--config", required=True, type=Path, help="Pfad zur JSON-Konfiguration")
     process_parser.add_argument("--dry-run", action="store_true", help="Nur anzeigen, nichts verschieben")
     process_parser.add_argument("--log", type=Path, help="CSV-Protokoll schreiben oder erweitern")
+
+    assign_parser = subparsers.add_parser("assign", help="Nicht zuordenbares Dokument manuell einem Projekt zuweisen")
+    assign_parser.add_argument("--config", required=True, type=Path, help="Pfad zur JSON-Konfiguration")
+    assign_parser.add_argument("--source", required=True, type=Path, help="Datei aus dem Klaerungsordner")
+    assign_parser.add_argument("--project", required=True, help="Projektcode, z. B. PRJ001")
+    assign_parser.add_argument("--dry-run", action="store_true", help="Nur anzeigen, nichts verschieben")
+    assign_parser.add_argument("--log", type=Path, help="CSV-Protokoll schreiben oder erweitern")
 
     check_ocr_parser = subparsers.add_parser("check-ocr", help="OCR-Voraussetzungen pruefen")
     check_ocr_parser.add_argument("--language", default="deu", help="Tesseract-Sprachcode, z. B. deu oder eng")
@@ -35,6 +42,16 @@ def main() -> int:
                 detail += f" [{result.reason}]"
             print(f"{result.status}: {result.source}{detail}")
         print(f"{len(results)} Datei(en) verarbeitet")
+        if args.log:
+            print(f"Protokoll geschrieben: {args.log}")
+        return 0
+
+    if args.command == "assign":
+        config = load_config(args.config)
+        result = assign_unassigned_document(config, args.source, args.project, dry_run=args.dry_run)
+        if args.log:
+            write_process_report(args.log, [result], dry_run=args.dry_run)
+        print(f"{result.status}: {result.source} -> {result.target} ({result.project_code})")
         if args.log:
             print(f"Protokoll geschrieben: {args.log}")
         return 0

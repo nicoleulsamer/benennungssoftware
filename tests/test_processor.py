@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 
 from benennungssoftware.config import AppConfig, Project
-from benennungssoftware.processor import process_scan_folder, sanitize
+from benennungssoftware.processor import assign_unassigned_document, process_scan_folder, sanitize
 
 
 class ProcessorTests(unittest.TestCase):
@@ -112,6 +112,48 @@ class ProcessorTests(unittest.TestCase):
 
             self.assertEqual(results[0].status, "assigned")
             self.assertTrue((root / "projects" / "PRJ001_Test" / "2026-06-14_PRJ001_Dokument_scan001.pdf").exists())
+
+    def test_manually_assigns_unassigned_document(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            unassigned_folder = root / "unassigned"
+            unassigned_folder.mkdir()
+            source = unassigned_folder / "scan003_unbekannt.txt"
+            source.write_text("Kein Treffer", encoding="utf-8")
+
+            config = AppConfig(
+                scan_folder=root / "scans",
+                projects_root=root / "projects",
+                unassigned_folder=unassigned_folder,
+                name_schema="{date}_{project_code}_{document_type}_{original_stem}{extension}",
+                default_document_type="Dokument",
+                allowed_extensions=(".txt",),
+                projects=(Project(code="PRJ002", folder="PRJ002_Test", keywords=("kunde b",)),),
+            )
+
+            result = assign_unassigned_document(config, source, "PRJ002", today=date(2026, 6, 14))
+
+            self.assertEqual(result.status, "manually_assigned")
+            self.assertFalse(source.exists())
+            self.assertTrue((root / "projects" / "PRJ002_Test" / "2026-06-14_PRJ002_Dokument_scan003_unbekannt.txt").exists())
+
+    def test_manual_assignment_rejects_unknown_project_code(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "scan.txt"
+            source.write_text("Text", encoding="utf-8")
+            config = AppConfig(
+                scan_folder=root / "scans",
+                projects_root=root / "projects",
+                unassigned_folder=root / "unassigned",
+                name_schema="{date}_{project_code}_{document_type}_{original_stem}{extension}",
+                default_document_type="Dokument",
+                allowed_extensions=(".txt",),
+                projects=(),
+            )
+
+            with self.assertRaises(ValueError):
+                assign_unassigned_document(config, source, "PRJ999")
 
     def test_sanitize_removes_unsafe_filename_characters(self) -> None:
         self.assertEqual(sanitize(" Rechnung: Kunde A / 2026 "), "Rechnung-Kunde-A-2026")

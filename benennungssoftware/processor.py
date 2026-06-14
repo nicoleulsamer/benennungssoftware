@@ -44,6 +44,37 @@ def process_scan_folder(config: AppConfig, *, dry_run: bool = False, today: date
     return results
 
 
+def assign_unassigned_document(
+    config: AppConfig,
+    source: Path,
+    project_code: str,
+    *,
+    dry_run: bool = False,
+    today: date | None = None,
+) -> ProcessResult:
+    project = find_project_by_code(config, project_code)
+    if project is None:
+        raise ValueError(f"Unknown project code: {project_code}")
+    if not source.exists() or not source.is_file():
+        raise FileNotFoundError(source)
+    if source.suffix.lower() not in config.allowed_extensions:
+        raise ValueError(f"Unsupported file extension: {source.suffix}")
+
+    current_date = today or date.today()
+    target_folder = config.projects_root / project.folder
+    filename = build_filename(config, project, source, current_date)
+    target = unique_path(target_folder / filename)
+    return _move(source, target, dry_run=dry_run, status="manually_assigned", project_code=project.code)
+
+
+def find_project_by_code(config: AppConfig, project_code: str) -> Project | None:
+    normalized = project_code.casefold()
+    for project in config.projects:
+        if project.code.casefold() == normalized:
+            return project
+    return None
+
+
 def match_project(source: Path, config: AppConfig) -> Project | None:
     filename_matches = _matching_projects(source.stem.casefold(), config.projects)
     if len(filename_matches) == 1:
