@@ -25,6 +25,10 @@ def main() -> int:
     assign_parser.add_argument("--dry-run", action="store_true", help="Nur anzeigen, nichts verschieben")
     assign_parser.add_argument("--log", type=Path, help="CSV-Protokoll schreiben oder erweitern")
 
+    projects_parser = subparsers.add_parser("projects", help="Konfigurierte Projekte anzeigen")
+    projects_parser.add_argument("--config", required=True, type=Path, help="Pfad zur JSON-Konfiguration")
+    projects_parser.add_argument("--keywords", action="store_true", help="Keywords je Projekt anzeigen")
+
     check_ocr_parser = subparsers.add_parser("check-ocr", help="OCR-Voraussetzungen pruefen")
     check_ocr_parser.add_argument("--language", default="deu", help="Tesseract-Sprachcode, z. B. deu oder eng")
 
@@ -54,6 +58,15 @@ def main() -> int:
         print(f"{result.status}: {result.source} -> {result.target} ({result.project_code})")
         if args.log:
             print(f"Protokoll geschrieben: {args.log}")
+        return 0
+
+    if args.command == "projects":
+        config = load_config(args.config)
+        for project in config.projects:
+            print(f"{project.code}: {project.folder}")
+            if args.keywords:
+                print(f"  keywords: {', '.join(project.keywords) or '-'}")
+        print(f"{len(config.projects)} Projekt(e) konfiguriert")
         return 0
 
     if args.command == "check-ocr":

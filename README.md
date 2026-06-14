@@ -32,6 +32,12 @@ python -m benennungssoftware.cli process --config examples/config.json --dry-run
 
 Das Protokoll enthält Zeitstempel, Dry-Run-Status, Quellpfad, Zielpfad, Projektcode und den Grund bei nicht zuordenbaren Dokumenten.
 
+Konfigurierte Projekte anzeigen:
+
+```powershell
+python -m benennungssoftware.cli projects --config examples/config.json --keywords
+```
+
 Ein Dokument aus dem Klärungsordner kann manuell einem Projekt zugewiesen werden:
 
 ```powershell
