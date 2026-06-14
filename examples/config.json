@@ -1,0 +1,26 @@
+{
+  "scan_folder": "demo/scans",
+  "projects_root": "demo/projects",
+  "unassigned_folder": "demo/unassigned",
+  "name_schema": "{date}_{project_code}_{document_type}_{original_stem}{extension}",
+  "default_document_type": "Dokument",
+  "allowed_extensions": [".pdf", ".txt"],
+  "text_extraction": {
+    "ocr_enabled": true,
+    "ocr_language": "deu",
+    "ocr_max_pages": 3,
+    "min_embedded_text_length": 20
+  },
+  "projects": [
+    {
+      "code": "PRJ001",
+      "folder": "PRJ001_Bauvorhaben-Mitte",
+      "keywords": ["bauvorhaben mitte", "bv-mitte", "kunde a", "rechnung mitte"]
+    },
+    {
+      "code": "PRJ002",
+      "folder": "PRJ002_Sanierung-Nord",
+      "keywords": ["sanierung nord", "snord", "kunde b", "abschlagszahlung nord"]
+    }
+  ]
+}

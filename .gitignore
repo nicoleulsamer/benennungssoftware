@@ -1,0 +1,19 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+.env
+
+# Demo output folders are recreated by the application.
+examples/demo/projects/
+examples/demo/unassigned/
+
+# Local editor and OS files.
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

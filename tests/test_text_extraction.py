@@ -1,0 +1,53 @@
+from __future__ import annotations
+
+from pathlib import Path
+from tempfile import TemporaryDirectory
+import unittest
+from unittest.mock import patch
+
+from benennungssoftware.text_extraction import TextExtractionConfig, extract_document_text, extract_pdf_text
+
+
+class TextExtractionTests(unittest.TestCase):
+    def test_reads_text_files(self) -> None:
+        with TemporaryDirectory() as tmp:
+            source = Path(tmp) / "scan.txt"
+            source.write_text("Projekt Sanierung Nord", encoding="utf-8")
+
+            text = extract_document_text(source, TextExtractionConfig())
+
+            self.assertIn("Sanierung Nord", text)
+
+    def test_pdf_uses_embedded_text_when_it_is_long_enough(self) -> None:
+        config = TextExtractionConfig(min_embedded_text_length=10)
+
+        with patch("benennungssoftware.text_extraction.extract_embedded_pdf_text", return_value="Genug eingebetteter PDF Text"):
+            with patch("benennungssoftware.text_extraction.extract_ocr_pdf_text") as ocr:
+                text = extract_pdf_text(Path("scan.pdf"), config)
+
+        self.assertIn("eingebetteter", text)
+        ocr.assert_not_called()
+
+    def test_pdf_falls_back_to_ocr_for_scanned_documents(self) -> None:
+        config = TextExtractionConfig(ocr_enabled=True, min_embedded_text_length=10)
+
+        with patch("benennungssoftware.text_extraction.extract_embedded_pdf_text", return_value=""):
+            with patch("benennungssoftware.text_extraction.extract_ocr_pdf_text", return_value="OCR Ergebnis Kunde A") as ocr:
+                text = extract_pdf_text(Path("scan.pdf"), config)
+
+        self.assertEqual(text, "OCR Ergebnis Kunde A")
+        ocr.assert_called_once()
+
+    def test_pdf_skips_ocr_when_disabled(self) -> None:
+        config = TextExtractionConfig(ocr_enabled=False, min_embedded_text_length=10)
+
+        with patch("benennungssoftware.text_extraction.extract_embedded_pdf_text", return_value=""):
+            with patch("benennungssoftware.text_extraction.extract_ocr_pdf_text") as ocr:
+                text = extract_pdf_text(Path("scan.pdf"), config)
+
+        self.assertEqual(text, "")
+        ocr.assert_not_called()
+
+
+if __name__ == "__main__":
+    unittest.main()
