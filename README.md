@@ -79,10 +79,9 @@ Python-Pakete installieren:
 python -m pip install -r requirements-ocr.txt
 ```
 
-Zusätzlich müssen diese Systemprogramme installiert und im `PATH` verfügbar sein:
+Zusätzlich muss Tesseract OCR mit deutscher Sprachdatei `deu` installiert und im `PATH` verfügbar sein.
 
-- Tesseract OCR mit deutscher Sprachdatei `deu`
-- Poppler, weil `pdf2image` daraus PDF-Seiten als Bilder erzeugt
+Für das Rendern der PDF-Seiten nutzt die Software zuerst PyMuPDF. Poppler ist nur noch ein optionaler Fallback für `pdf2image`.
 
 OCR-Voraussetzungen prüfen:
 

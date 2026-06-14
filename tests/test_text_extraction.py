@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
-from benennungssoftware.text_extraction import TextExtractionConfig, extract_document_text, extract_pdf_text
+from benennungssoftware.text_extraction import TextExtractionConfig, extract_document_text, extract_ocr_pdf_text, extract_pdf_text
 
 
 class TextExtractionTests(unittest.TestCase):
@@ -37,6 +37,25 @@ class TextExtractionTests(unittest.TestCase):
 
         self.assertEqual(text, "OCR Ergebnis Kunde A")
         ocr.assert_called_once()
+
+    def test_ocr_uses_pymupdf_before_pdf2image(self) -> None:
+        config = TextExtractionConfig(ocr_enabled=True)
+
+        with patch("benennungssoftware.text_extraction.extract_ocr_pdf_text_with_pymupdf", return_value="PyMuPDF OCR"):
+            with patch("benennungssoftware.text_extraction.extract_ocr_pdf_text_with_pdf2image") as pdf2image:
+                text = extract_ocr_pdf_text(Path("scan.pdf"), config)
+
+        self.assertEqual(text, "PyMuPDF OCR")
+        pdf2image.assert_not_called()
+
+    def test_ocr_falls_back_to_pdf2image_when_pymupdf_is_unavailable(self) -> None:
+        config = TextExtractionConfig(ocr_enabled=True)
+
+        with patch("benennungssoftware.text_extraction.extract_ocr_pdf_text_with_pymupdf", return_value=""):
+            with patch("benennungssoftware.text_extraction.extract_ocr_pdf_text_with_pdf2image", return_value="Poppler OCR"):
+                text = extract_ocr_pdf_text(Path("scan.pdf"), config)
+
+        self.assertEqual(text, "Poppler OCR")
 
     def test_pdf_skips_ocr_when_disabled(self) -> None:
         config = TextExtractionConfig(ocr_enabled=False, min_embedded_text_length=10)

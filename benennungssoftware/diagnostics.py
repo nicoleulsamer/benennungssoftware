@@ -16,18 +16,20 @@ class CheckResult:
 def check_ocr_environment(language: str = "deu") -> list[CheckResult]:
     return [
         _check_python_package("pypdf"),
+        _check_python_package("fitz", label="pymupdf"),
         _check_python_package("pdf2image"),
         _check_python_package("pytesseract"),
         _check_program("tesseract"),
-        _check_program("pdftoppm", label="poppler/pdftoppm"),
+        _check_pdf_renderer(),
         _check_tesseract_language(language),
     ]
 
 
-def _check_python_package(package: str) -> CheckResult:
+def _check_python_package(package: str, *, label: str | None = None) -> CheckResult:
+    name = label or package
     if importlib.util.find_spec(package) is None:
-        return CheckResult(package, False, "Python-Paket fehlt")
-    return CheckResult(package, True, "Python-Paket installiert")
+        return CheckResult(name, False, "Python-Paket fehlt")
+    return CheckResult(name, True, "Python-Paket installiert")
 
 
 def _check_program(program: str, *, label: str | None = None) -> CheckResult:
@@ -36,6 +38,15 @@ def _check_program(program: str, *, label: str | None = None) -> CheckResult:
     if path is None:
         return CheckResult(name, False, "Programm nicht im PATH gefunden")
     return CheckResult(name, True, path)
+
+
+def _check_pdf_renderer() -> CheckResult:
+    if importlib.util.find_spec("fitz") is not None:
+        return CheckResult("pdf renderer", True, "PyMuPDF verfügbar; Poppler nicht zwingend nötig")
+    path = shutil.which("pdftoppm")
+    if path is not None:
+        return CheckResult("pdf renderer", True, f"Poppler verfügbar: {path}")
+    return CheckResult("pdf renderer", False, "PyMuPDF fehlt und poppler/pdftoppm ist nicht im PATH")
 
 
 def _check_tesseract_language(language: str) -> CheckResult:

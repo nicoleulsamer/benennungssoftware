@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from io import BytesIO
 from typing import Any
 
 
@@ -47,6 +48,35 @@ def extract_embedded_pdf_text(source: Path) -> str:
 
 
 def extract_ocr_pdf_text(source: Path, config: TextExtractionConfig) -> str:
+    pymupdf_text = extract_ocr_pdf_text_with_pymupdf(source, config)
+    if pymupdf_text:
+        return pymupdf_text
+    return extract_ocr_pdf_text_with_pdf2image(source, config)
+
+
+def extract_ocr_pdf_text_with_pymupdf(source: Path, config: TextExtractionConfig) -> str:
+    try:
+        import fitz
+        from PIL import Image
+        import pytesseract
+    except ImportError:
+        return ""
+
+    try:
+        document = fitz.open(str(source))
+        texts = []
+        page_count = min(len(document), max(1, config.ocr_max_pages))
+        for page_index in range(page_count):
+            page = document.load_page(page_index)
+            pixmap = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
+            image = Image.open(BytesIO(pixmap.tobytes("png")))
+            texts.append(pytesseract.image_to_string(image, lang=config.ocr_language))
+    except Exception:
+        return ""
+    return "\n".join(texts).strip()
+
+
+def extract_ocr_pdf_text_with_pdf2image(source: Path, config: TextExtractionConfig) -> str:
     try:
         from pdf2image import convert_from_path
         import pytesseract
