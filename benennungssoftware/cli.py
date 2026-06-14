@@ -6,7 +6,7 @@ from pathlib import Path
 from .config import add_keyword_to_config, add_project_to_config, load_config, validate_config_file
 from .diagnostics import check_ocr_environment
 from .processor import assign_unassigned_document, list_unassigned_documents, process_scan_folder
-from .reporting import write_process_report
+from .reporting import summarize_process_report, write_process_report
 from .text_extraction import extract_document_text, preview_text
 
 
@@ -18,6 +18,10 @@ def main() -> int:
     process_parser.add_argument("--config", required=True, type=Path, help="Pfad zur JSON-Konfiguration")
     process_parser.add_argument("--dry-run", action="store_true", help="Nur anzeigen, nichts verschieben")
     process_parser.add_argument("--log", type=Path, help="CSV-Protokoll schreiben oder erweitern")
+
+    report_parser = subparsers.add_parser("report", help="CSV-Protokoll zusammenfassen")
+    report_parser.add_argument("--log", required=True, type=Path, help="Pfad zum CSV-Protokoll")
+    report_parser.add_argument("--show-unassigned", action="store_true", help="Nicht zugeordnete Zielpfade anzeigen")
 
     assign_parser = subparsers.add_parser("assign", help="Nicht zuordenbares Dokument manuell einem Projekt zuweisen")
     assign_parser.add_argument("--config", required=True, type=Path, help="Pfad zur JSON-Konfiguration")
@@ -71,6 +75,24 @@ def main() -> int:
         print(f"{len(results)} Datei(en) verarbeitet")
         if args.log:
             print(f"Protokoll geschrieben: {args.log}")
+        return 0
+
+    if args.command == "report":
+        summary = summarize_process_report(args.log)
+        print(f"Gesamt: {summary.total}")
+        print("Status:")
+        for status, count in summary.by_status.items():
+            print(f"  {status}: {count}")
+        print("Projekte:")
+        if summary.by_project:
+            for project_code, count in summary.by_project.items():
+                print(f"  {project_code}: {count}")
+        else:
+            print("  -")
+        print(f"Klärungsfälle: {len(summary.unassigned_targets)}")
+        if args.show_unassigned:
+            for target in summary.unassigned_targets:
+                print(f"  {target}")
         return 0
 
     if args.command == "assign":

@@ -32,6 +32,12 @@ python -m benennungssoftware.cli process --config examples/config.json --dry-run
 
 Das Protokoll enthält Zeitstempel, Dry-Run-Status, Quellpfad, Zielpfad, Projektcode und den Grund bei nicht zuordenbaren Dokumenten.
 
+Ein CSV-Protokoll kann zusammengefasst werden:
+
+```powershell
+python -m benennungssoftware.cli report --log examples/demo/process-log.csv --show-unassigned
+```
+
 Konfigurierte Projekte anzeigen:
 
 ```powershell
