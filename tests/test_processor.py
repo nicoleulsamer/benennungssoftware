@@ -6,8 +6,14 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
-from benennungssoftware.config import AppConfig, Project
-from benennungssoftware.processor import assign_unassigned_document, list_unassigned_documents, process_scan_folder, sanitize
+from benennungssoftware.config import AppConfig, ExcelConfig, Project
+from benennungssoftware.processor import (
+    assign_unassigned_document,
+    list_unassigned_documents,
+    process_scan_folder,
+    process_single_file,
+    sanitize,
+)
 
 
 class ProcessorTests(unittest.TestCase):
@@ -193,6 +199,66 @@ class ProcessorTests(unittest.TestCase):
             )
 
             self.assertEqual(list_unassigned_documents(config), [])
+
+    def test_processes_single_file_for_gui_workflow(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "rechnung-kunde-a.pdf"
+            source.write_bytes(b"pdf")
+            config = AppConfig(
+                scan_folder=root / "scan",
+                projects_root=root / "projects",
+                unassigned_folder=root / "unassigned",
+                name_schema="{date}_{project_code}_{document_type}_{original_stem}{extension}",
+                default_document_type="Dokument",
+                allowed_extensions=(".pdf",),
+                projects=(Project(code="PRJ001", folder="PRJ001_Test", keywords=("kunde a",)),),
+            )
+
+            results = process_single_file(config, source, today=date(2026, 6, 14))
+
+            self.assertEqual(results[0].status, "assigned")
+            self.assertFalse(source.exists())
+            self.assertTrue((root / "projects" / "PRJ001_Test" / "2026-06-14_PRJ001_Dokument_rechnung-kunde-a.pdf").exists())
+
+    def test_processes_single_file_and_updates_excel_workbook(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            scan_folder = root / "scans"
+            scan_folder.mkdir()
+            source = scan_folder / "rechnung-kunde-a.pdf"
+            source.write_bytes(b"pdf")
+            workbook_path = root / "Rechnungsuebersicht.xlsx"
+            config = AppConfig(
+                scan_folder=scan_folder,
+                projects_root=root / "projects",
+                unassigned_folder=root / "unassigned",
+                name_schema="{date}_{project_code}_{document_type}_{original_stem}{extension}",
+                default_document_type="Rechnung",
+                allowed_extensions=(".pdf",),
+                projects=(Project(code="PRJ001", folder="PRJ001_Test", keywords=("kunde a",)),),
+                excel=ExcelConfig(
+                    enabled=True,
+                    workbook_path=workbook_path,
+                    workbook_code="9543",
+                    sheet_name="Rechnungsübersicht",
+                    columns=("Nr", "Originaldatei", "Neuer Name", "Status", "Hinweis"),
+                ),
+            )
+
+            results = process_single_file(config, source, today=date(2026, 6, 14))
+
+            self.assertEqual(results[0].status, "assigned")
+            self.assertTrue(workbook_path.exists())
+
+            from openpyxl import load_workbook
+
+            workbook = load_workbook(workbook_path)
+            sheet = workbook["Rechnungsübersicht"]
+            self.assertEqual(sheet["A2"].value, 1)
+            self.assertEqual(sheet["B2"].value, "rechnung-kunde-a.pdf")
+            self.assertEqual(sheet["C2"].value, "2026-06-14_PRJ001_Rechnung_rechnung-kunde-a.pdf")
+            self.assertEqual(sheet["D2"].value, "assigned")
 
     def test_sanitize_removes_unsafe_filename_characters(self) -> None:
         self.assertEqual(sanitize(" Rechnung: Kunde A / 2026 "), "Rechnung-Kunde-A-2026")

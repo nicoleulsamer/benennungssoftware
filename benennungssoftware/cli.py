@@ -5,7 +5,7 @@ from pathlib import Path
 
 from .config import add_keyword_to_config, add_project_to_config, load_config, validate_config_file
 from .diagnostics import check_ocr_environment
-from .processor import assign_unassigned_document, list_unassigned_documents, process_scan_folder
+from .processor import assign_unassigned_document, list_unassigned_documents, process_scan_folder, process_single_file
 from .reporting import summarize_process_report, write_process_report
 from .text_extraction import extract_document_text, preview_text
 
@@ -18,6 +18,11 @@ def main() -> int:
     process_parser.add_argument("--config", required=True, type=Path, help="Pfad zur JSON-Konfiguration")
     process_parser.add_argument("--dry-run", action="store_true", help="Nur anzeigen, nichts verschieben")
     process_parser.add_argument("--log", type=Path, help="CSV-Protokoll schreiben oder erweitern")
+
+    single_parser = subparsers.add_parser("process-one", help="Eine einzelne Datei verarbeiten")
+    single_parser.add_argument("--config", required=True, type=Path, help="Pfad zur JSON-Konfiguration")
+    single_parser.add_argument("--source", required=True, type=Path, help="Datei, die verarbeitet werden soll")
+    single_parser.add_argument("--dry-run", action="store_true", help="Nur anzeigen, nichts verschieben")
 
     report_parser = subparsers.add_parser("report", help="CSV-Protokoll zusammenfassen")
     report_parser.add_argument("--log", required=True, type=Path, help="Pfad zum CSV-Protokoll")
@@ -59,6 +64,9 @@ def main() -> int:
     check_ocr_parser = subparsers.add_parser("check-ocr", help="OCR-Voraussetzungen pruefen")
     check_ocr_parser.add_argument("--language", default="deu", help="Tesseract-Sprachcode, z. B. deu oder eng")
 
+    gui_parser = subparsers.add_parser("gui", help="Lokale Benutzeroberflaeche starten")
+    gui_parser.add_argument("--config", type=Path, default=Path(__file__).resolve().parents[1] / "examples" / "config.json", help="Pfad zur JSON-Konfiguration")
+
     args = parser.parse_args()
     if args.command == "process":
         config = load_config(args.config)
@@ -75,6 +83,18 @@ def main() -> int:
         print(f"{len(results)} Datei(en) verarbeitet")
         if args.log:
             print(f"Protokoll geschrieben: {args.log}")
+        return 0
+
+    if args.command == "process-one":
+        config = load_config(args.config)
+        results = process_single_file(config, args.source, dry_run=args.dry_run)
+        result = results[0]
+        detail = f" -> {result.target}"
+        if result.project_code:
+            detail += f" ({result.project_code})"
+        if result.reason:
+            detail += f" [{result.reason}]"
+        print(f"{result.status}: {result.source}{detail}")
         return 0
 
     if args.command == "report":
@@ -158,6 +178,11 @@ def main() -> int:
             marker = "OK" if result.ok else "FEHLT"
             print(f"{marker}: {result.name} - {result.detail}")
         return 0 if all(result.ok for result in results) else 1
+
+    if args.command == "gui":
+        from .gui import run_gui
+        run_gui(args.config)
+        return 0
 
     return 2
 

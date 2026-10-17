@@ -15,6 +15,15 @@ class Project:
 
 
 @dataclass(frozen=True)
+class ExcelConfig:
+    enabled: bool = False
+    workbook_path: Path | None = None
+    workbook_code: str = "9543"
+    sheet_name: str = "Rechnungsübersicht"
+    columns: tuple[str, ...] = ("Nr", "Originaldatei", "Neuer Name", "Status", "Hinweis")
+
+
+@dataclass(frozen=True)
 class AppConfig:
     scan_folder: Path
     projects_root: Path
@@ -24,6 +33,7 @@ class AppConfig:
     allowed_extensions: tuple[str, ...]
     projects: tuple[Project, ...]
     text_extraction: TextExtractionConfig = field(default_factory=TextExtractionConfig)
+    excel: ExcelConfig = field(default_factory=ExcelConfig)
 
 
 @dataclass(frozen=True)
@@ -45,6 +55,7 @@ def load_config(path: str | Path) -> AppConfig:
         default_document_type=raw.get("default_document_type", "Dokument"),
         allowed_extensions=tuple(ext.lower() for ext in raw.get("allowed_extensions", [".pdf"])),
         text_extraction=_load_text_extraction(raw.get("text_extraction", {})),
+        excel=_load_excel(base_dir, raw.get("excel", {})),
         projects=tuple(
             Project(
                 code=item["code"],
@@ -155,6 +166,23 @@ def _load_text_extraction(raw: dict) -> TextExtractionConfig:
         ocr_language=raw.get("ocr_language", "deu"),
         ocr_max_pages=int(raw.get("ocr_max_pages", 3)),
         min_embedded_text_length=int(raw.get("min_embedded_text_length", 20)),
+    )
+
+
+def _load_excel(base_dir: Path, raw: dict) -> ExcelConfig:
+    workbook_path = raw.get("workbook_path")
+    resolved_workbook = None
+    if workbook_path:
+        resolved_workbook = _resolve(base_dir, str(workbook_path))
+    elif raw.get("enabled"):
+        resolved_workbook = (base_dir / "Rechnungsuebersicht.xlsx").resolve()
+
+    return ExcelConfig(
+        enabled=bool(raw.get("enabled", False)),
+        workbook_path=resolved_workbook,
+        workbook_code=str(raw.get("workbook_code", "9543")),
+        sheet_name=str(raw.get("sheet_name", "Rechnungsübersicht")),
+        columns=tuple(str(column) for column in raw.get("columns", ("Nr", "Originaldatei", "Neuer Name", "Status", "Hinweis"))),
     )
 
 

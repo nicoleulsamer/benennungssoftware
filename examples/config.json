@@ -8,6 +8,19 @@
     ".pdf",
     ".txt"
   ],
+  "excel": {
+    "enabled": true,
+    "workbook_path": "demo/Rechnungsuebersicht.xlsx",
+    "workbook_code": "9543",
+    "sheet_name": "Rechnungsübersicht",
+    "columns": [
+      "Nr",
+      "Originaldatei",
+      "Neuer Name",
+      "Status",
+      "Hinweis"
+    ]
+  },
   "text_extraction": {
     "ocr_enabled": true,
     "ocr_language": "deu",
