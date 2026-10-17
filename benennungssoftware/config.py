@@ -34,6 +34,7 @@ class AppConfig:
     projects: tuple[Project, ...]
     text_extraction: TextExtractionConfig = field(default_factory=TextExtractionConfig)
     excel: ExcelConfig = field(default_factory=ExcelConfig)
+    rename_log_path: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -56,6 +57,7 @@ def load_config(path: str | Path) -> AppConfig:
         allowed_extensions=tuple(ext.lower() for ext in raw.get("allowed_extensions", [".pdf"])),
         text_extraction=_load_text_extraction(raw.get("text_extraction", {})),
         excel=_load_excel(base_dir, raw.get("excel", {})),
+        rename_log_path=_load_rename_log_path(base_dir, raw.get("rename_log_path")),
         projects=tuple(
             Project(
                 code=item["code"],
@@ -184,6 +186,17 @@ def _load_excel(base_dir: Path, raw: dict) -> ExcelConfig:
         sheet_name=str(raw.get("sheet_name", "Rechnungsübersicht")),
         columns=tuple(str(column) for column in raw.get("columns", ("Nr", "Originaldatei", "Neuer Name", "Status", "Hinweis"))),
     )
+
+
+def _load_rename_log_path(base_dir: Path, raw_value: str | None | bool) -> Path | None:
+    if raw_value is False:
+        return None
+    if raw_value is None:
+        return base_dir / "protokoll_umbenennung.csv"
+    value = str(raw_value).strip()
+    if not value:
+        return None
+    return _resolve(base_dir, value)
 
 
 def _normalize_keywords(keywords: list[str]) -> list[str]:

@@ -19,7 +19,13 @@ class ProcessResult:
     reason: str | None = None
 
 
-def process_scan_folder(config: AppConfig, *, dry_run: bool = False, today: date | None = None) -> list[ProcessResult]:
+def process_scan_folder(
+    config: AppConfig,
+    *,
+    dry_run: bool = False,
+    today: date | None = None,
+    log_path: Path | None = None,
+) -> list[ProcessResult]:
     current_date = today or date.today()
     config.scan_folder.mkdir(parents=True, exist_ok=True)
     config.projects_root.mkdir(parents=True, exist_ok=True)
@@ -47,6 +53,7 @@ def process_scan_folder(config: AppConfig, *, dry_run: bool = False, today: date
             _append_to_excel_workbook(config, result)
         results.append(result)
 
+    _write_rename_log(log_path or config.rename_log_path, results, dry_run=dry_run)
     return results
 
 
@@ -56,6 +63,7 @@ def process_single_file(
     *,
     dry_run: bool = False,
     today: date | None = None,
+    log_path: Path | None = None,
 ) -> list[ProcessResult]:
     if not source.exists() or not source.is_file():
         raise FileNotFoundError(source)
@@ -72,6 +80,7 @@ def process_single_file(
         result = _move(source, target, dry_run=dry_run, status="unassigned", reason="no_project_match")
         if not dry_run:
             _append_to_excel_workbook(config, result)
+        _write_rename_log(log_path or config.rename_log_path, [result], dry_run=dry_run)
         return [result]
 
     target_folder = config.projects_root / project.folder
@@ -80,6 +89,7 @@ def process_single_file(
     result = _move(source, target, dry_run=dry_run, status="assigned", project_code=project.code)
     if not dry_run:
         _append_to_excel_workbook(config, result)
+    _write_rename_log(log_path or config.rename_log_path, [result], dry_run=dry_run)
     return [result]
 
 
@@ -90,6 +100,7 @@ def assign_unassigned_document(
     *,
     dry_run: bool = False,
     today: date | None = None,
+    log_path: Path | None = None,
 ) -> ProcessResult:
     project = find_project_by_code(config, project_code)
     if project is None:
@@ -106,6 +117,7 @@ def assign_unassigned_document(
     result = _move(source, target, dry_run=dry_run, status="manually_assigned", project_code=project.code)
     if not dry_run:
         _append_to_excel_workbook(config, result)
+    _write_rename_log(log_path or config.rename_log_path, [result], dry_run=dry_run)
     return result
 
 
@@ -128,16 +140,29 @@ def find_project_by_code(config: AppConfig, project_code: str) -> Project | None
 
 
 def match_project(source: Path, config: AppConfig) -> Project | None:
-    filename_matches = _matching_projects(source.stem.casefold(), config.projects)
-    if len(filename_matches) == 1:
-        return filename_matches[0]
-
     text = extract_document_text(source, config.text_extraction)
     haystack = f"{source.stem} {text}".casefold()
     matches = _matching_projects(haystack, config.projects)
-    if len(matches) == 1:
-        return matches[0]
-    return None
+    if not matches:
+        filename_matches = _matching_projects(source.stem.casefold(), config.projects)
+        if len(filename_matches) == 1:
+            return filename_matches[0]
+        return None
+
+    ranked = sorted(
+        ((project, _project_match_score(haystack, project)) for project in matches),
+        key=lambda entry: (-entry[1], entry[0].code.casefold()),
+    )
+    best_project, best_score = ranked[0]
+    if best_score <= 0:
+        return None
+
+    if len(ranked) > 1:
+        second_score = ranked[1][1]
+        if second_score == best_score:
+            return None
+
+    return best_project
 
 
 def _matching_projects(haystack: str, projects: tuple[Project, ...]) -> list[Project]:
@@ -150,6 +175,102 @@ def _matching_projects(haystack: str, projects: tuple[Project, ...]) -> list[Pro
             for keyword in project.keywords
         )
     ]
+
+
+def _project_match_score(haystack: str, project: Project) -> int:
+    normalized_haystack = re.sub(r"[^a-z0-9]+", " ", haystack.casefold()).strip()
+    score = 0
+    seen_hits: set[str] = set()
+
+    for keyword in project.keywords:
+        normalized_keyword = re.sub(r"[^a-z0-9]+", " ", keyword.casefold()).strip()
+        if not normalized_keyword:
+            continue
+        if normalized_keyword in normalized_haystack:
+            weight = 4 if " " in normalized_keyword else 2
+            score += weight
+            seen_hits.add(normalized_keyword)
+
+    if project.code.casefold() in haystack.casefold():
+        score += 10
+
+    if len(seen_hits) > 1:
+        score += min(len(seen_hits) * 2, 12)
+
+    return score
+
+
+def parse_company_entries(text: str) -> list[dict[str, str]]:
+    entries: list[dict[str, str]] = []
+    current: dict[str, str] | None = None
+
+    def consume_field(line: str) -> tuple[str, str] | None:
+        cleaned = re.sub(r"^(?:[A-Za-zÄÖÜäöüß]{1,3}\.?\s+)+", "", line.strip())
+        field_match = re.match(
+            r"^(UID-Nummer|UID-Nr|UID|Firmenbuchnummer|Firmenbuch|Gründung|Steuernummer|Steuernr)\s*[:.-]?\s*(.*)$",
+            cleaned,
+            flags=re.IGNORECASE,
+        )
+        if field_match is None:
+            return None
+
+        label, value = field_match.groups()
+        key_map = {
+            "uid-nummer": "uid_nummer",
+            "uid-nr": "uid_nummer",
+            "uid": "uid_nummer",
+            "firmenbuchnummer": "firmenbuchnummer",
+            "firmenbuch": "firmenbuchnummer",
+            "gründung": "gruendung",
+            "gruendung": "gruendung",
+            "steuernummer": "steuernummer",
+            "steuernr": "steuernummer",
+        }
+        normalized_value = value.strip() or "folgt"
+        normalized_label = label.casefold()
+        if normalized_label not in key_map:
+            return None
+        return key_map[normalized_label], normalized_value
+
+    for raw_line in text.splitlines():
+        line = " ".join(raw_line.split())
+        if not line:
+            continue
+        if line.startswith("FIRMENLISTE"):
+            if current is not None:
+                entries.append(current)
+            break
+
+        entry_match = re.match(r"^\((?P<tag>[A-Z0-9]+)\)\s*(?P<body>.+)$", line)
+        if entry_match:
+            if current is not None:
+                entries.append(current)
+            body = entry_match.group("body").strip()
+            address_match = re.search(r"(?P<address>\d{4}\s+[A-Za-zÄÖÜäöüß0-9.,/ -]+)$", body)
+            if address_match:
+                company_name = body[: address_match.start()].strip().rstrip(" ,;-")
+                address = address_match.group("address").strip()
+            else:
+                company_name = body.strip()
+                address = ""
+            current = {
+                "kennzeichen": entry_match.group("tag"),
+                "firma": company_name,
+                "adresse": address,
+            }
+            continue
+
+        if current is None:
+            continue
+
+        field = consume_field(line)
+        if field is not None:
+            current[field[0]] = field[1]
+
+    if current is not None:
+        entries.append(current)
+
+    return entries
 
 
 def build_filename(config: AppConfig, project: Project, source: Path, current_date: date) -> str:
@@ -209,6 +330,14 @@ def _move(
     return ProcessResult(source=source, target=target, status=status, project_code=project_code, reason=reason)
 
 
+def _write_rename_log(path: Path | None, results: list[ProcessResult], *, dry_run: bool) -> None:
+    if path is None:
+        return
+    from .reporting import write_process_report
+
+    write_process_report(path, results, dry_run=dry_run)
+
+
 def _append_to_excel_workbook(config: AppConfig, result: ProcessResult) -> None:
     if not config.excel.enabled or config.excel.workbook_path is None:
         return
@@ -255,3 +384,175 @@ def _append_to_excel_workbook(config: AppConfig, result: ProcessResult) -> None:
         result.reason or "",
     ])
     workbook.save(workbook_path)
+
+
+def append_company_entries_to_excel(config: AppConfig, entries: list[dict[str, str]]) -> None:
+    if not config.excel.enabled or config.excel.workbook_path is None or not entries:
+        return
+
+    try:
+        from openpyxl import Workbook, load_workbook
+    except ImportError:
+        return
+
+    workbook_path = config.excel.workbook_path
+    workbook_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if workbook_path.exists():
+        workbook = load_workbook(workbook_path)
+    else:
+        workbook = Workbook()
+
+    if config.excel.sheet_name not in workbook.sheetnames:
+        worksheet = workbook.active
+        worksheet.title = config.excel.sheet_name
+    else:
+        worksheet = workbook[config.excel.sheet_name]
+
+    headers = list(config.excel.columns)
+    if worksheet.max_row == 0:
+        worksheet.append(headers)
+    elif worksheet.max_row == 1 and worksheet["A1"].value is None:
+        worksheet.delete_rows(1, 1)
+        worksheet.append(headers)
+    elif worksheet["A1"].value != headers[0]:
+        worksheet.insert_rows(1)
+        worksheet["A1"] = headers[0]
+        for column_index, header in enumerate(headers[1:], start=2):
+            worksheet.cell(row=1, column=column_index, value=header)
+
+    next_number = worksheet.max_row
+    if worksheet.max_row == 1 and worksheet["A1"].value == headers[0]:
+        next_number = 1
+
+    for entry in entries:
+        row = [next_number]
+        for column in headers[1:]:
+            value = ""
+            normalized_column = column.casefold().replace(" ", "-")
+            if normalized_column in {"firma", "firma-name", "unternehmen"}:
+                value = entry.get("firma", "")
+            elif normalized_column in {"kennzeichen", "code", "tag"}:
+                value = entry.get("kennzeichen", "")
+            elif normalized_column in {"adresse", "ort", "anschrift"}:
+                value = entry.get("adresse", "")
+            elif normalized_column in {"uid-nummer", "uid"}:
+                value = entry.get("uid_nummer", "")
+            elif normalized_column in {"firmenbuchnummer", "firm-number", "firmenbuch"}:
+                value = entry.get("firmenbuchnummer", "")
+            elif normalized_column in {"gruendung", "gründung", "gegruendet"}:
+                value = entry.get("gruendung", "")
+            elif normalized_column in {"status", "zustand", "erfasst"}:
+                value = "erfasst"
+            elif normalized_column in {"hinweis", "notiz"}:
+                value = entry.get("hinweis", "")
+            row.append(value)
+        worksheet.append(row)
+        next_number += 1
+
+    workbook.save(workbook_path)
+
+
+def import_company_list_pdf(config: AppConfig, source: Path) -> list[dict[str, str]]:
+    if not source.exists() or not source.is_file():
+        raise FileNotFoundError(source)
+
+    text = extract_document_text(source, config.text_extraction)
+    entries = parse_company_entries(text)
+    if not entries:
+        return []
+
+    append_company_entries_to_excel(config, entries)
+    return entries
+
+
+def _normalize_sheet_header(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", value.casefold()).strip("_")
+
+
+def import_company_list_workbook(config: AppConfig, workbook_path: Path) -> list[dict[str, str]]:
+    if not workbook_path.exists() or not workbook_path.is_file():
+        raise FileNotFoundError(workbook_path)
+
+    try:
+        from openpyxl import load_workbook
+    except ImportError as exc:
+        raise RuntimeError("openpyxl is required to import Excel files") from exc
+
+    workbook = load_workbook(workbook_path, read_only=True, data_only=True)
+    target_sheet = None
+    candidate_names = [config.excel.sheet_name, "Projektliste", "Firmenliste", "Projektübersicht", "Firmenübersicht"]
+    for name in candidate_names:
+        if name in workbook.sheetnames:
+            target_sheet = workbook[name]
+            break
+    if target_sheet is None:
+        target_sheet = workbook[workbook.sheetnames[0]]
+
+    rows = list(target_sheet.iter_rows(values_only=True))
+    if not rows:
+        return []
+
+    header_row = rows[0]
+    header_map: dict[str, int] = {}
+    for index, cell in enumerate(header_row):
+        if cell is None:
+            continue
+        header_map[_normalize_sheet_header(str(cell))] = index
+
+    field_aliases = {
+        "firma": "firma",
+        "unternehmen": "firma",
+        "projekt": "firma",
+        "name": "firma",
+        "kennzeichen": "kennzeichen",
+        "code": "kennzeichen",
+        "adresse": "adresse",
+        "anschrift": "adresse",
+        "ort": "adresse",
+        "uid": "uid_nummer",
+        "uid_nummer": "uid_nummer",
+        "uidnummer": "uid_nummer",
+        "firmenbuchnummer": "firmenbuchnummer",
+        "firmenbuch": "firmenbuchnummer",
+        "gruendung": "gruendung",
+        "gründung": "gruendung",
+        "gegrundet": "gruendung",
+        "status": "status",
+    }
+
+    column_indexes = {}
+    for canonical, alias in field_aliases.items():
+        index = header_map.get(canonical)
+        if index is None:
+            continue
+        column_indexes[alias] = index
+
+    entries: list[dict[str, str]] = []
+    for row in rows[1:]:
+        if not row or all(cell is None or str(cell).strip() == "" for cell in row):
+            continue
+        entry: dict[str, str] = {}
+        if 0 in range(len(row)):
+            pass
+        for field_name, index in column_indexes.items():
+            if index >= len(row):
+                continue
+            value = row[index]
+            if value is None:
+                value = ""
+            entry[field_name] = str(value).strip()
+        if not entry:
+            continue
+        if "firma" not in entry and row and row[0] is not None:
+            entry["firma"] = str(row[0]).strip()
+        if "status" not in entry:
+            entry["status"] = "erfasst"
+        entries.append(entry)
+
+    try:
+        if entries:
+            append_company_entries_to_excel(config, entries)
+    finally:
+        workbook.close()
+    return entries

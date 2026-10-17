@@ -5,7 +5,13 @@ from pathlib import Path
 
 from .config import add_keyword_to_config, add_project_to_config, load_config, validate_config_file
 from .diagnostics import check_ocr_environment
-from .processor import assign_unassigned_document, list_unassigned_documents, process_scan_folder, process_single_file
+from .processor import (
+    assign_unassigned_document,
+    import_company_list_pdf,
+    list_unassigned_documents,
+    process_scan_folder,
+    process_single_file,
+)
 from .reporting import summarize_process_report, write_process_report
 from .text_extraction import extract_document_text, preview_text
 
@@ -23,6 +29,7 @@ def main() -> int:
     single_parser.add_argument("--config", required=True, type=Path, help="Pfad zur JSON-Konfiguration")
     single_parser.add_argument("--source", required=True, type=Path, help="Datei, die verarbeitet werden soll")
     single_parser.add_argument("--dry-run", action="store_true", help="Nur anzeigen, nichts verschieben")
+    single_parser.add_argument("--log", type=Path, help="CSV-Protokoll schreiben oder erweitern")
 
     report_parser = subparsers.add_parser("report", help="CSV-Protokoll zusammenfassen")
     report_parser.add_argument("--log", required=True, type=Path, help="Pfad zum CSV-Protokoll")
@@ -64,15 +71,18 @@ def main() -> int:
     check_ocr_parser = subparsers.add_parser("check-ocr", help="OCR-Voraussetzungen pruefen")
     check_ocr_parser.add_argument("--language", default="deu", help="Tesseract-Sprachcode, z. B. deu oder eng")
 
+    company_list_parser = subparsers.add_parser("import-company-list", help="Firmenliste als PDF einlesen und in das Excel-Workbook schreiben")
+    company_list_parser.add_argument("--config", required=True, type=Path, help="Pfad zur JSON-Konfiguration")
+    company_list_parser.add_argument("--source", required=True, type=Path, help="Pfad zur Firmenliste-PDF")
+
     gui_parser = subparsers.add_parser("gui", help="Lokale Benutzeroberflaeche starten")
     gui_parser.add_argument("--config", type=Path, default=Path(__file__).resolve().parents[1] / "examples" / "config.json", help="Pfad zur JSON-Konfiguration")
 
     args = parser.parse_args()
     if args.command == "process":
         config = load_config(args.config)
-        results = process_scan_folder(config, dry_run=args.dry_run)
-        if args.log:
-            write_process_report(args.log, results, dry_run=args.dry_run)
+        log_path = args.log or config.rename_log_path
+        results = process_scan_folder(config, dry_run=args.dry_run, log_path=log_path)
         for result in results:
             detail = f" -> {result.target}"
             if result.project_code:
@@ -81,13 +91,14 @@ def main() -> int:
                 detail += f" [{result.reason}]"
             print(f"{result.status}: {result.source}{detail}")
         print(f"{len(results)} Datei(en) verarbeitet")
-        if args.log:
-            print(f"Protokoll geschrieben: {args.log}")
+        if log_path:
+            print(f"Protokoll geschrieben: {log_path}")
         return 0
 
     if args.command == "process-one":
         config = load_config(args.config)
-        results = process_single_file(config, args.source, dry_run=args.dry_run)
+        log_path = args.log or config.rename_log_path
+        results = process_single_file(config, args.source, dry_run=args.dry_run, log_path=log_path)
         result = results[0]
         detail = f" -> {result.target}"
         if result.project_code:
@@ -95,6 +106,8 @@ def main() -> int:
         if result.reason:
             detail += f" [{result.reason}]"
         print(f"{result.status}: {result.source}{detail}")
+        if log_path:
+            print(f"Protokoll geschrieben: {log_path}")
         return 0
 
     if args.command == "report":
@@ -117,12 +130,11 @@ def main() -> int:
 
     if args.command == "assign":
         config = load_config(args.config)
-        result = assign_unassigned_document(config, args.source, args.project, dry_run=args.dry_run)
-        if args.log:
-            write_process_report(args.log, [result], dry_run=args.dry_run)
+        log_path = args.log or config.rename_log_path
+        result = assign_unassigned_document(config, args.source, args.project, dry_run=args.dry_run, log_path=log_path)
         print(f"{result.status}: {result.source} -> {result.target} ({result.project_code})")
-        if args.log:
-            print(f"Protokoll geschrieben: {args.log}")
+        if log_path:
+            print(f"Protokoll geschrieben: {log_path}")
         return 0
 
     if args.command == "projects":
@@ -178,6 +190,14 @@ def main() -> int:
             marker = "OK" if result.ok else "FEHLT"
             print(f"{marker}: {result.name} - {result.detail}")
         return 0 if all(result.ok for result in results) else 1
+
+    if args.command == "import-company-list":
+        config = load_config(args.config)
+        entries = import_company_list_pdf(config, args.source)
+        print(f"{len(entries)} Firma(en) aus {args.source} importiert")
+        if config.excel.workbook_path:
+            print(f"Workbook: {config.excel.workbook_path}")
+        return 0
 
     if args.command == "gui":
         from .gui import run_gui

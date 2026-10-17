@@ -1,0 +1,3 @@
+timestamp,dry_run,status,source,target,project_code,reason
+2026-10-17T15:24:59,false,unassigned,examples\demo\unassigned\Scan_08_11_26_14_48_47.pdf,C:\Users\ulsam\Desktop\Benennungssoftware\examples\demo\unassigned\Scan_08_11_26_14_48_47_002.pdf,,no_project_match
+2026-10-17T15:33:42,false,manually_assigned,examples\demo\unassigned\Scan_08_11_26_14_48_47_002.pdf,C:\Users\ulsam\Desktop\Benennungssoftware\examples\demo\projects\P-54_Innsbruck_Anna-Dengel-Strasse\2026-10-17_P-54_Dokument_Scan_08_11_26_14_48_47_002.pdf,P-54,

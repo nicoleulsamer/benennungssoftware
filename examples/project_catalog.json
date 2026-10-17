@@ -1,0 +1,489 @@
+[
+  {
+    "code": "P-24",
+    "folder": "P-24_wien_1200_weber_gasse_13_denigasse_1",
+    "keywords": [
+      "p-24",
+      "wien",
+      "1200",
+      "weber",
+      "gasse",
+      "denigasse"
+    ],
+    "standort": "Wien 1200, Weber gasse 13, Denigasse 1"
+  },
+  {
+    "code": "P-26",
+    "folder": "P-26_wien_1180_staudgasse_40",
+    "keywords": [
+      "p-26",
+      "wien",
+      "1180",
+      "staudgasse"
+    ],
+    "standort": "Wien 1180, Staudgasse 40"
+  },
+  {
+    "code": "P-27",
+    "folder": "P-27_wien_1060_millergasse_34",
+    "keywords": [
+      "p-27",
+      "wien",
+      "1060",
+      "millergasse"
+    ],
+    "standort": "Wien 1060, Millergasse 34"
+  },
+  {
+    "code": "P-28",
+    "folder": "P-28_kranebitten_kranebitterhof",
+    "keywords": [
+      "p-28",
+      "kranebitten",
+      "kranebitterhof"
+    ],
+    "standort": "Kranebitten, Kranebitterhof"
+  },
+  {
+    "code": "P-36",
+    "folder": "P-36_h_tting_riedgasse_2",
+    "keywords": [
+      "p-36",
+      "tting",
+      "riedgasse"
+    ],
+    "standort": "Hötting, Riedgasse 2"
+  },
+  {
+    "code": "P-38",
+    "folder": "P-38_v_ls_innsbrucker_stra_e_wa_flora",
+    "keywords": [
+      "p-38",
+      "innsbrucker",
+      "stra",
+      "flora"
+    ],
+    "standort": "Völs, Innsbrucker Straße WA Flora"
+  },
+  {
+    "code": "P-39",
+    "folder": "P-39_m_hlau_josef_schraffl_stra_e",
+    "keywords": [
+      "p-39",
+      "hlau",
+      "josef",
+      "schraffl",
+      "stra"
+    ],
+    "standort": "Mühlau, Josef-Schraffl-Straße"
+  },
+  {
+    "code": "P-40",
+    "folder": "P-40_sistrans_puitnegg",
+    "keywords": [
+      "p-40",
+      "sistrans",
+      "puitnegg"
+    ],
+    "standort": "Sistrans, Puitnegg"
+  },
+  {
+    "code": "P-41",
+    "folder": "P-41_v_ls_seesiedlung",
+    "keywords": [
+      "p-41",
+      "seesiedlung"
+    ],
+    "standort": "Völs, Seesiedlung"
+  },
+  {
+    "code": "P-42",
+    "folder": "P-42_birgitz_bachrain",
+    "keywords": [
+      "p-42",
+      "birgitz",
+      "bachrain"
+    ],
+    "standort": "Birgitz, Bachrain"
+  },
+  {
+    "code": "P-44",
+    "folder": "P-44_h_ttinger_au_nagillergasse_75_79",
+    "keywords": [
+      "p-44",
+      "ttinger",
+      "nagillergasse"
+    ],
+    "standort": "Höttinger Au, Nagillergasse 75+79"
+  },
+  {
+    "code": "P-45",
+    "folder": "P-45_lans_ranser_weg",
+    "keywords": [
+      "p-45",
+      "lans",
+      "ranser",
+      "weg"
+    ],
+    "standort": "Lans, Ranser Weg"
+  },
+  {
+    "code": "P-46",
+    "folder": "P-46_hall_schopperweg",
+    "keywords": [
+      "p-46",
+      "hall",
+      "schopperweg"
+    ],
+    "standort": "Hall, Schopperweg"
+  },
+  {
+    "code": "P-47",
+    "folder": "P-47_wien_schanzstra_e_44",
+    "keywords": [
+      "p-47",
+      "wien",
+      "schanzstra"
+    ],
+    "standort": "Wien, Schanzstraße 44"
+  },
+  {
+    "code": "P-48",
+    "folder": "P-48_innsbruck_kranebitter_allee_16",
+    "keywords": [
+      "p-48",
+      "innsbruck",
+      "kranebitter",
+      "allee"
+    ],
+    "standort": "Innsbruck, Kranebitter Allee 16"
+  },
+  {
+    "code": "P-51",
+    "folder": "P-51_seefeld_hotel_tirol_alpenhof",
+    "keywords": [
+      "p-51",
+      "seefeld",
+      "hotel",
+      "tirol",
+      "alpenhof"
+    ],
+    "standort": "Seefeld, Hotel Tirol-Alpenhof"
+  },
+  {
+    "code": "P-52",
+    "folder": "P-52_lans_hermannstal",
+    "keywords": [
+      "p-52",
+      "lans",
+      "hermannstal"
+    ],
+    "standort": "Lans, Hermannstal"
+  },
+  {
+    "code": "P-53",
+    "folder": "P-53_rum_canisiusweg_149",
+    "keywords": [
+      "p-53",
+      "rum",
+      "canisiusweg",
+      "149"
+    ],
+    "standort": "Rum, Canisiusweg 149"
+  },
+  {
+    "code": "P-54",
+    "folder": "P-54_innsbruck_anna_dengel_stra_e",
+    "keywords": [
+      "p-54",
+      "innsbruck",
+      "anna",
+      "dengel",
+      "stra"
+    ],
+    "standort": "Innsbruck, Anna-Dengel-Straße"
+  },
+  {
+    "code": "P-55",
+    "folder": "P-55_st_johann_klausnerareal",
+    "keywords": [
+      "p-55",
+      "johann",
+      "klausnerareal"
+    ],
+    "standort": "St. Johann, Klausnerareal"
+  },
+  {
+    "code": "P-56",
+    "folder": "P-56_wien_1180_anastasius_gr_n_gasse_32",
+    "keywords": [
+      "p-56",
+      "wien",
+      "1180",
+      "anastasius",
+      "gasse"
+    ],
+    "standort": "Wien 1180, Anastasius-Grün-Gasse 32"
+  },
+  {
+    "code": "P-59",
+    "folder": "P-59_langkampfen_r_merweg",
+    "keywords": [
+      "p-59",
+      "langkampfen",
+      "merweg"
+    ],
+    "standort": "Langkampfen, Römerweg"
+  },
+  {
+    "code": "P-61",
+    "folder": "P-61_innsbruck_hunoldstra_e_14",
+    "keywords": [
+      "p-61",
+      "innsbruck",
+      "hunoldstra"
+    ],
+    "standort": "Innsbruck, Hunoldstraße 14"
+  },
+  {
+    "code": "P-63",
+    "folder": "P-63_kufstein_kaiserberg",
+    "keywords": [
+      "p-63",
+      "kufstein",
+      "kaiserberg"
+    ],
+    "standort": "Kufstein, Kaiserberg"
+  },
+  {
+    "code": "P-64",
+    "folder": "P-64_mutters_kreith",
+    "keywords": [
+      "p-64",
+      "mutters",
+      "kreith"
+    ],
+    "standort": "Mutters, Kreith"
+  },
+  {
+    "code": "P-65",
+    "folder": "P-65_innsbruck_amraserstra_e",
+    "keywords": [
+      "p-65",
+      "innsbruck",
+      "amraserstra"
+    ],
+    "standort": "Innsbruck, Amraserstraße"
+  },
+  {
+    "code": "P-66",
+    "folder": "P-66_wien_strudlhof",
+    "keywords": [
+      "p-66",
+      "wien",
+      "strudlhof"
+    ],
+    "standort": "Wien, Strudlhof"
+  },
+  {
+    "code": "P-67",
+    "folder": "P-67_arzl_schusterbergweg_34f",
+    "keywords": [
+      "p-67",
+      "arzl",
+      "schusterbergweg",
+      "34f"
+    ],
+    "standort": "Arzl, Schusterbergweg 34f"
+  },
+  {
+    "code": "P-69",
+    "folder": "P-69_innsbruck_nagillergasse_67_baurecht_staudigl",
+    "keywords": [
+      "p-69",
+      "innsbruck",
+      "nagillergasse",
+      "baurecht",
+      "staudigl"
+    ],
+    "standort": "Innsbruck, Nagillergasse 67, Baurecht Staudigl"
+  },
+  {
+    "code": "P-70",
+    "folder": "P-70_wien_rauchfangkehrergasse_30",
+    "keywords": [
+      "p-70",
+      "wien",
+      "rauchfangkehrergasse"
+    ],
+    "standort": "Wien, Rauchfangkehrergasse 30"
+  },
+  {
+    "code": "P-71",
+    "folder": "P-71_westendorf_bergliftstra_e",
+    "keywords": [
+      "p-71",
+      "westendorf",
+      "bergliftstra"
+    ],
+    "standort": "Westendorf, Bergliftstraße"
+  },
+  {
+    "code": "P-72",
+    "folder": "P-72_mutters_innsbrucker_stra_e_18",
+    "keywords": [
+      "p-72",
+      "mutters",
+      "innsbrucker",
+      "stra"
+    ],
+    "standort": "Mutters, Innsbrucker Straße 18"
+  },
+  {
+    "code": "P-74",
+    "folder": "P-74_wien_1130_jaunerstra_e_5_napoleonwald",
+    "keywords": [
+      "p-74",
+      "wien",
+      "1130",
+      "jaunerstra",
+      "napoleonwald"
+    ],
+    "standort": "Wien 1130, Jaunerstraße 5 Napoleonwald"
+  },
+  {
+    "code": "P-75",
+    "folder": "P-75_jenbach_dr_neuner_weg",
+    "keywords": [
+      "p-75",
+      "jenbach",
+      "neuner",
+      "weg"
+    ],
+    "standort": "Jenbach, Dr.-Neuner-Weg"
+  },
+  {
+    "code": "P-78",
+    "folder": "P-78_wien_1100_davidgasse_59_karmarschgasse_57",
+    "keywords": [
+      "p-78",
+      "wien",
+      "1100",
+      "davidgasse",
+      "karmarschgasse"
+    ],
+    "standort": "Wien 1100, Davidgasse 59 - Karmarschgasse 57"
+  },
+  {
+    "code": "P-82",
+    "folder": "P-82_st_johann_oberhofen",
+    "keywords": [
+      "p-82",
+      "johann",
+      "oberhofen"
+    ],
+    "standort": "St. Johann, Oberhofen"
+  },
+  {
+    "code": "P-84",
+    "folder": "P-84_wien_lindengasse_40",
+    "keywords": [
+      "p-84",
+      "wien",
+      "lindengasse"
+    ],
+    "standort": "Wien, Lindengasse 40"
+  },
+  {
+    "code": "P-85",
+    "folder": "P-85_pradl_pembaurstra_e_9",
+    "keywords": [
+      "p-85",
+      "pradl",
+      "pembaurstra"
+    ],
+    "standort": "Pradl, Pembaurstraße 9"
+  },
+  {
+    "code": "P-87",
+    "folder": "P-87_fieberbrunn_mittermoos",
+    "keywords": [
+      "p-87",
+      "fieberbrunn",
+      "mittermoos"
+    ],
+    "standort": "Fieberbrunn, Mittermoos"
+  },
+  {
+    "code": "P-88",
+    "folder": "P-88_hall_sch_negg",
+    "keywords": [
+      "p-88",
+      "hall",
+      "sch",
+      "negg"
+    ],
+    "standort": "Hall, Schönegg"
+  },
+  {
+    "code": "P-89",
+    "folder": "P-89_st_johann_hornweg_6",
+    "keywords": [
+      "p-89",
+      "johann",
+      "hornweg"
+    ],
+    "standort": "St. Johann, Hornweg 6"
+  },
+  {
+    "code": "P-90",
+    "folder": "P-90_schwaz_dr_waizer_str",
+    "keywords": [
+      "p-90",
+      "schwaz",
+      "waizer",
+      "str"
+    ],
+    "standort": "Schwaz, Dr. Waizer-Str"
+  },
+  {
+    "code": "P-91",
+    "folder": "P-91_innsbruck_lohbachweg_e",
+    "keywords": [
+      "p-91",
+      "innsbruck",
+      "lohbachweg"
+    ],
+    "standort": "Innsbruck, Lohbachweg E"
+  },
+  {
+    "code": "P-92",
+    "folder": "P-92_innsbruck_schneeburggasse_92",
+    "keywords": [
+      "p-92",
+      "innsbruck",
+      "schneeburggasse"
+    ],
+    "standort": "Innsbruck, Schneeburggasse 92"
+  },
+  {
+    "code": "P-93",
+    "folder": "P-93_innsbruck_lohbachweg_d",
+    "keywords": [
+      "p-93",
+      "innsbruck",
+      "lohbachweg"
+    ],
+    "standort": "Innsbruck, Lohbachweg D"
+  },
+  {
+    "code": "P-94",
+    "folder": "P-94_innsbruck_v_gelebichl_62",
+    "keywords": [
+      "p-94",
+      "innsbruck",
+      "gelebichl"
+    ],
+    "standort": "Innsbruck, Vögelebichl 62"
+  }
+]
