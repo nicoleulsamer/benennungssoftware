@@ -11,6 +11,7 @@ from .processor import (
     list_unassigned_documents,
     process_scan_folder,
     process_single_file,
+    suggest_projects,
 )
 from .reporting import summarize_process_report, write_process_report
 from .text_extraction import extract_document_text, preview_text
@@ -67,6 +68,11 @@ def main() -> int:
     inspect_parser.add_argument("--config", required=True, type=Path, help="Pfad zur JSON-Konfiguration")
     inspect_parser.add_argument("--source", required=True, type=Path, help="Zu pruefende Datei")
     inspect_parser.add_argument("--chars", type=int, default=2000, help="Maximale Zeichen im Textausschnitt")
+
+    suggest_parser = subparsers.add_parser("suggest-projects", help="Projektvorschlaege fuer eine Datei anzeigen")
+    suggest_parser.add_argument("--config", required=True, type=Path, help="Pfad zur JSON-Konfiguration")
+    suggest_parser.add_argument("--source", required=True, type=Path, help="Datei, fuer die Vorschlaege erstellt werden sollen")
+    suggest_parser.add_argument("--limit", type=int, default=5, help="Anzahl der Vorschlaege")
 
     check_ocr_parser = subparsers.add_parser("check-ocr", help="OCR-Voraussetzungen pruefen")
     check_ocr_parser.add_argument("--language", default="deu", help="Tesseract-Sprachcode, z. B. deu oder eng")
@@ -182,6 +188,16 @@ def main() -> int:
             print("Kein Text erkannt")
             return 1
         print(preview_text(text, max(1, args.chars)))
+        return 0
+
+    if args.command == "suggest-projects":
+        config = load_config(args.config)
+        suggestions = suggest_projects(args.source, config, limit=max(1, args.limit))
+        if not suggestions:
+            print("Keine Projektsuggestions gefunden")
+            return 1
+        for project, score in suggestions:
+            print(f"{project.code}: score={score} | folder={project.folder}")
         return 0
 
     if args.command == "check-ocr":

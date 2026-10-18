@@ -139,28 +139,36 @@ def find_project_by_code(config: AppConfig, project_code: str) -> Project | None
     return None
 
 
-def match_project(source: Path, config: AppConfig) -> Project | None:
+def suggest_projects(source: Path, config: AppConfig, limit: int = 5) -> list[tuple[Project, int]]:
     text = extract_document_text(source, config.text_extraction)
     haystack = f"{source.stem} {text}".casefold()
     matches = _matching_projects(haystack, config.projects)
     if not matches:
-        filename_matches = _matching_projects(source.stem.casefold(), config.projects)
-        if len(filename_matches) == 1:
-            return filename_matches[0]
-        return None
+        return []
 
     ranked = sorted(
         ((project, _project_match_score(haystack, project)) for project in matches),
         key=lambda entry: (-entry[1], entry[0].code.casefold()),
     )
-    best_project, best_score = ranked[0]
-    if best_score <= 0:
+    return [(project, score) for project, score in ranked[:limit]]
+
+
+def match_project(source: Path, config: AppConfig) -> Project | None:
+    suggestions = suggest_projects(source, config, limit=10)
+    if not suggestions:
+        filename_matches = _matching_projects(source.stem.casefold(), config.projects)
+        if len(filename_matches) == 1:
+            return filename_matches[0]
         return None
 
-    if len(ranked) > 1:
-        second_score = ranked[1][1]
+    best_project, best_score = suggestions[0]
+    if len(suggestions) > 1:
+        second_score = suggestions[1][1]
         if second_score == best_score:
             return None
+
+    if best_score <= 0:
+        return None
 
     return best_project
 
@@ -274,14 +282,29 @@ def parse_company_entries(text: str) -> list[dict[str, str]]:
 
 
 def build_filename(config: AppConfig, project: Project, source: Path, current_date: date) -> str:
+    document_label = _document_label(source)
+    if document_label is not None:
+        return f"{document_label}{source.suffix.lower()}"
+
     values = {
         "date": current_date.isoformat(),
         "project_code": sanitize(project.code),
         "document_type": sanitize(config.default_document_type),
         "original_stem": sanitize(source.stem),
+        "document_label": sanitize(source.stem),
         "extension": source.suffix.lower(),
     }
     return config.name_schema.format(**values)
+
+
+def _document_label(source: Path) -> str | None:
+    stem = source.stem.strip()
+    if not stem:
+        return None
+
+    if re.match(r"^[A-Z]{2,}(?:[_-][A-Za-z0-9]+)+$", stem):
+        return sanitize(stem)
+    return None
 
 
 def sanitize(value: str) -> str:

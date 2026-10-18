@@ -10,6 +10,7 @@ from benennungssoftware.config import AppConfig, ExcelConfig, Project, load_conf
 from benennungssoftware.processor import (
     append_company_entries_to_excel,
     assign_unassigned_document,
+    build_filename,
     import_company_list_pdf,
     import_company_list_workbook,
     list_unassigned_documents,
@@ -18,6 +19,7 @@ from benennungssoftware.processor import (
     process_scan_folder,
     process_single_file,
     sanitize,
+    suggest_projects,
 )
 
 
@@ -48,6 +50,42 @@ class ProcessorTests(unittest.TestCase):
             self.assertEqual(results[0].status, "assigned")
             self.assertFalse(source.exists())
             self.assertTrue((projects_root / "PRJ001_Test" / "2026-06-14_PRJ001_Rechnung_rechnung-kunde-a.pdf").exists())
+
+    def test_preserves_invoice_document_label_when_source_already_has_re_prefix(self) -> None:
+        config = AppConfig(
+            scan_folder=Path("/tmp/scans"),
+            projects_root=Path("/tmp/projects"),
+            unassigned_folder=Path("/tmp/unassigned"),
+            name_schema="{date}_{project_code}_{document_type}_{original_stem}{extension}",
+            default_document_type="Rechnung",
+            allowed_extensions=(".pdf",),
+            projects=(Project(code="P-54", folder="P-54_Test", keywords=("anna dengel",)),),
+        )
+
+        source = Path("RE_MWP_BV54_AnnaDengelStrasse_2020_Thurnerbau_ARB-2026.pdf")
+
+        self.assertEqual(
+            build_filename(config, config.projects[0], source, date(2026, 10, 18)),
+            "RE_MWP_BV54_AnnaDengelStrasse_2020_Thurnerbau_ARB-2026.pdf",
+        )
+
+    def test_preserves_other_structured_document_label_patterns(self) -> None:
+        config = AppConfig(
+            scan_folder=Path("/tmp/scans"),
+            projects_root=Path("/tmp/projects"),
+            unassigned_folder=Path("/tmp/unassigned"),
+            name_schema="{date}_{project_code}_{document_type}_{original_stem}{extension}",
+            default_document_type="Dokument",
+            allowed_extensions=(".pdf",),
+            projects=(Project(code="P-77", folder="P-77_Test", keywords=("customer",)),),
+        )
+
+        source = Path("AN_Offer_2026_Example.pdf")
+
+        self.assertEqual(
+            build_filename(config, config.projects[0], source, date(2026, 10, 18)),
+            "AN_Offer_2026_Example.pdf",
+        )
 
     def test_writes_default_rename_log_for_processed_file(self) -> None:
         with TemporaryDirectory() as tmp:
@@ -154,12 +192,22 @@ class ProcessorTests(unittest.TestCase):
     def test_real_demo_invoice_matches_project_list(self) -> None:
         root = Path(__file__).resolve().parents[1]
         config = load_config(root / "examples" / "config.json")
-        source = root / "examples" / "demo" / "scans" / "Scan_08_04_26_16_26_52.pdf"
+        source = root / "examples" / "demo" / "unassigned" / "Scan_08_04_26_16_26_52.pdf"
 
         project = match_project(source, config)
 
         self.assertIsNotNone(project)
         self.assertEqual(project.code, "P-54")
+
+    def test_suggests_top_project_candidates_for_unassigned_invoice(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        config = load_config(root / "examples" / "config.json")
+        source = root / "examples" / "demo" / "unassigned" / "Scan_08_05_26_14_51_26.pdf"
+
+        suggestions = suggest_projects(source, config, limit=5)
+
+        self.assertTrue(suggestions)
+        self.assertEqual(suggestions[0][0].code, "P-61")
 
     def test_manually_assigns_unassigned_document(self) -> None:
         with TemporaryDirectory() as tmp:
