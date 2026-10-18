@@ -185,6 +185,61 @@ def _matching_projects(haystack: str, projects: tuple[Project, ...]) -> list[Pro
     ]
 
 
+GENERIC_PROJECT_KEYWORDS = {
+    "wien",
+    "innsbruck",
+    "hall",
+    "vols",
+    "lans",
+    "st",
+    "au",
+    "gasse",
+    "str",
+    "strae",
+    "strasse",
+    "weg",
+    "platz",
+    "platzl",
+    "johann",
+    "schon",
+    "hotting",
+    "muhlau",
+    "birgitz",
+    "seefeld",
+    "kufstein",
+    "rum",
+    "arzl",
+    "westendorf",
+    "mutters",
+    "jenbach",
+    "schwaz",
+    "fieberbrunn",
+    "pradl",
+    "hall",
+    "sistrans",
+    "puitnegg",
+    "kranebitten",
+    "alpenhof",
+    "dokument",
+    "rechnung",
+    "scan",
+}
+
+
+def _keyword_weight(normalized_keyword: str) -> int:
+    if not normalized_keyword:
+        return 0
+    if normalized_keyword in GENERIC_PROJECT_KEYWORDS:
+        return 1
+    if " " in normalized_keyword:
+        return 12
+    if len(normalized_keyword) <= 3:
+        return 1
+    if len(normalized_keyword) <= 5:
+        return 3
+    return 5
+
+
 def _project_match_score(haystack: str, project: Project) -> int:
     normalized_haystack = re.sub(r"[^a-z0-9]+", " ", haystack.casefold()).strip()
     score = 0
@@ -195,15 +250,18 @@ def _project_match_score(haystack: str, project: Project) -> int:
         if not normalized_keyword:
             continue
         if normalized_keyword in normalized_haystack:
-            weight = 4 if " " in normalized_keyword else 2
+            weight = _keyword_weight(normalized_keyword)
             score += weight
             seen_hits.add(normalized_keyword)
 
     if project.code.casefold() in haystack.casefold():
-        score += 10
+        score += 15
 
     if len(seen_hits) > 1:
-        score += min(len(seen_hits) * 2, 12)
+        score += min(len(seen_hits) * 3, 18)
+
+    if len(seen_hits) == 1 and next(iter(seen_hits)) in GENERIC_PROJECT_KEYWORDS:
+        score = max(score - 3, 0)
 
     return score
 
@@ -486,6 +544,97 @@ def import_company_list_pdf(config: AppConfig, source: Path) -> list[dict[str, s
         return []
 
     append_company_entries_to_excel(config, entries)
+    return entries
+
+
+def parse_bkp_entries(text: str) -> list[dict[str, str]]:
+    entries: list[dict[str, str]] = []
+    pattern = re.compile(r"(?<!\d)(\d{4})\s+([^\d][^\n]*?)(?=\s+\d{4}\s+|$)")
+
+    for raw_line in text.splitlines():
+        line = " ".join(raw_line.split())
+        if not line:
+            continue
+        if "BKP" in line.upper() or line.upper().startswith("BAUKOSTEN"):
+            continue
+
+        matches = pattern.findall(line)
+        for code, description in matches:
+            cleaned = description.strip()
+            if not cleaned:
+                continue
+            entries.append({
+                "code": code.strip(),
+                "beschreibung": cleaned,
+            })
+    return entries
+
+
+def append_bkp_entries_to_excel(config: AppConfig, entries: list[dict[str, str]]) -> None:
+    if not config.excel.enabled or config.excel.workbook_path is None or not entries:
+        return
+
+    try:
+        from openpyxl import Workbook, load_workbook
+    except ImportError:
+        return
+
+    workbook_path = config.excel.workbook_path
+    workbook_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if workbook_path.exists():
+        workbook = load_workbook(workbook_path)
+    else:
+        workbook = Workbook()
+
+    if config.excel.sheet_name not in workbook.sheetnames:
+        worksheet = workbook.active
+        worksheet.title = config.excel.sheet_name
+    else:
+        worksheet = workbook[config.excel.sheet_name]
+
+    headers = list(config.excel.columns)
+    if worksheet.max_row == 0:
+        worksheet.append(headers)
+    elif worksheet.max_row == 1 and worksheet["A1"].value is None:
+        worksheet.delete_rows(1, 1)
+        worksheet.append(headers)
+    elif worksheet["A1"].value != headers[0]:
+        worksheet.insert_rows(1)
+        worksheet["A1"] = headers[0]
+        for column_index, header in enumerate(headers[1:], start=2):
+            worksheet.cell(row=1, column=column_index, value=header)
+
+    next_number = worksheet.max_row
+    if worksheet.max_row == 1 and worksheet["A1"].value == headers[0]:
+        next_number = 1
+
+    for entry in entries:
+        row = [next_number]
+        for column in headers[1:]:
+            value = ""
+            normalized_column = column.casefold().replace(" ", "-")
+            if normalized_column in {"code", "nummer", "kontennummer"}:
+                value = entry.get("code", "")
+            elif normalized_column in {"beschreibung", "bezeichnung", "name"}:
+                value = entry.get("beschreibung", "")
+            row.append(value)
+        worksheet.append(row)
+        next_number += 1
+
+    workbook.save(workbook_path)
+
+
+def import_bkp_list_pdf(config: AppConfig, source: Path) -> list[dict[str, str]]:
+    if not source.exists() or not source.is_file():
+        raise FileNotFoundError(source)
+
+    text = extract_document_text(source, config.text_extraction)
+    entries = parse_bkp_entries(text)
+    if not entries:
+        return []
+
+    append_bkp_entries_to_excel(config, entries)
     return entries
 
 

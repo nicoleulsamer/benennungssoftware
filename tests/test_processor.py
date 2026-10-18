@@ -11,10 +11,12 @@ from benennungssoftware.processor import (
     append_company_entries_to_excel,
     assign_unassigned_document,
     build_filename,
+    import_bkp_list_pdf,
     import_company_list_pdf,
     import_company_list_workbook,
     list_unassigned_documents,
     match_project,
+    parse_bkp_entries,
     parse_company_entries,
     process_scan_folder,
     process_single_file,
@@ -190,14 +192,21 @@ class ProcessorTests(unittest.TestCase):
             self.assertTrue((root / "projects" / "PRJ001_Test" / "2026-06-14_PRJ001_Dokument_scan001.pdf").exists())
 
     def test_real_demo_invoice_matches_project_list(self) -> None:
-        root = Path(__file__).resolve().parents[1]
-        config = load_config(root / "examples" / "config.json")
-        source = root / "examples" / "demo" / "unassigned" / "Scan_08_04_26_16_26_52.pdf"
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "Scan_08_04_26_16_26_52.pdf"
+            source.write_bytes(b"pdf")
 
-        project = match_project(source, config)
+            config = load_config(Path(__file__).resolve().parents[1] / "examples" / "config.json")
 
-        self.assertIsNotNone(project)
-        self.assertEqual(project.code, "P-54")
+            with patch("benennungssoftware.processor.extract_document_text", return_value="""Anna Dengel Straße 14
+Innsbruck
+Rechnung Moser Immobilien
+"""):
+                project = match_project(source, config)
+
+            self.assertIsNotNone(project)
+            self.assertEqual(project.code, "P-54")
 
     def test_suggests_top_project_candidates_for_unassigned_invoice(self) -> None:
         root = Path(__file__).resolve().parents[1]
@@ -515,6 +524,76 @@ Gründung 2019
             result_sheet = result_wb["Firmenliste"]
             self.assertEqual(result_sheet["B2"].value, "Moser Immobilien Holding GmbH")
             self.assertEqual(result_sheet["E2"].value, "ATU74156637")
+
+    def test_parses_bkp_list_format(self) -> None:
+        text = """Baukosten-Positions-Nummern-Liste  (BKP-Liste)
+0001 Grund
+6000 Außenanlagen
+0010 Grunderwerb
+6010 Aussenanlagen inkl. Wiederherstellung
+"""
+
+        entries = parse_bkp_entries(text)
+
+        self.assertEqual(len(entries), 4)
+        self.assertEqual(entries[0]["code"], "0001")
+        self.assertEqual(entries[0]["beschreibung"], "Grund")
+        self.assertEqual(entries[1]["code"], "6000")
+        self.assertEqual(entries[1]["beschreibung"], "Außenanlagen")
+
+    def test_parses_bkp_list_format_with_multiple_entries_per_line(self) -> None:
+        text = """Baukosten-Positions-Nummern-Liste  (BKP-Liste)
+0001 Grund 6000 Außenanlagen
+0010 Grunderwerb 6010 Aussenanlagen inkl. Wiederherstellung
+"""
+
+        entries = parse_bkp_entries(text)
+
+        self.assertEqual(len(entries), 4)
+        self.assertEqual(entries[0]["code"], "0001")
+        self.assertEqual(entries[0]["beschreibung"], "Grund")
+        self.assertEqual(entries[1]["code"], "6000")
+        self.assertEqual(entries[1]["beschreibung"], "Außenanlagen")
+
+    def test_imports_bkp_list_pdf_into_workbook(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "bkp.pdf"
+            source.write_bytes(b"pdf")
+            workbook_path = root / "BKP.xlsx"
+            config = AppConfig(
+                scan_folder=root / "scans",
+                projects_root=root / "projects",
+                unassigned_folder=root / "unassigned",
+                name_schema="{date}_{project_code}_{document_type}_{original_stem}{extension}",
+                default_document_type="BKP",
+                allowed_extensions=(".pdf",),
+                projects=(),
+                excel=ExcelConfig(
+                    enabled=True,
+                    workbook_path=workbook_path,
+                    workbook_code="9543",
+                    sheet_name="BKP",
+                    columns=("Nr", "Code", "Beschreibung"),
+                ),
+            )
+
+            with patch("benennungssoftware.processor.extract_document_text", return_value="""Baukosten-Positions-Nummern-Liste  (BKP-Liste)
+0001 Grund
+6000 Außenanlagen
+"""):
+                entries = import_bkp_list_pdf(config, source)
+
+            self.assertEqual(len(entries), 2)
+            self.assertEqual(entries[0]["code"], "0001")
+            self.assertEqual(entries[0]["beschreibung"], "Grund")
+
+            from openpyxl import load_workbook
+            workbook = load_workbook(workbook_path)
+            sheet = workbook["BKP"]
+            self.assertEqual(sheet["A2"].value, 1)
+            self.assertEqual(sheet["B2"].value, "0001")
+            self.assertEqual(sheet["C2"].value, "Grund")
 
     def test_sanitize_removes_unsafe_filename_characters(self) -> None:
         self.assertEqual(sanitize(" Rechnung: Kunde A / 2026 "), "Rechnung-Kunde-A-2026")

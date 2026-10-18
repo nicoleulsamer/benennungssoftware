@@ -7,6 +7,7 @@ from .config import add_keyword_to_config, add_project_to_config, load_config, v
 from .diagnostics import check_ocr_environment
 from .processor import (
     assign_unassigned_document,
+    import_bkp_list_pdf,
     import_company_list_pdf,
     list_unassigned_documents,
     process_scan_folder,
@@ -80,6 +81,10 @@ def main() -> int:
     company_list_parser = subparsers.add_parser("import-company-list", help="Firmenliste als PDF einlesen und in das Excel-Workbook schreiben")
     company_list_parser.add_argument("--config", required=True, type=Path, help="Pfad zur JSON-Konfiguration")
     company_list_parser.add_argument("--source", required=True, type=Path, help="Pfad zur Firmenliste-PDF")
+
+    bkp_list_parser = subparsers.add_parser("import-bkp-list", help="BKP-Liste als PDF einlesen und in das Excel-Workbook schreiben")
+    bkp_list_parser.add_argument("--config", required=True, type=Path, help="Pfad zur JSON-Konfiguration")
+    bkp_list_parser.add_argument("--source", required=True, type=Path, help="Pfad zur BKP-PDF")
 
     gui_parser = subparsers.add_parser("gui", help="Lokale Benutzeroberflaeche starten")
     gui_parser.add_argument("--config", type=Path, default=Path(__file__).resolve().parents[1] / "examples" / "config.json", help="Pfad zur JSON-Konfiguration")
@@ -211,6 +216,14 @@ def main() -> int:
         config = load_config(args.config)
         entries = import_company_list_pdf(config, args.source)
         print(f"{len(entries)} Firma(en) aus {args.source} importiert")
+        if config.excel.workbook_path:
+            print(f"Workbook: {config.excel.workbook_path}")
+        return 0
+
+    if args.command == "import-bkp-list":
+        config = load_config(args.config)
+        entries = import_bkp_list_pdf(config, args.source)
+        print(f"{len(entries)} BKP-Einträge aus {args.source} importiert")
         if config.excel.workbook_path:
             print(f"Workbook: {config.excel.workbook_path}")
         return 0
